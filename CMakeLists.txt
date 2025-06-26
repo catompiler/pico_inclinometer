@@ -5,14 +5,12 @@ cmake_minimum_required(VERSION 3.20)
 # pico platform
 set(PICO_PLATFORM rp2040)
 # pico board
-set(PICO_BOARD waveshare_rp2040_lcd_1.28)
+set(PICO_BOARD pico)#waveshare_rp2040_lcd_1.28)
 # pico compiler
 set(PICO_COMPILER pico_arm_cortex_m0plus_gcc)
 
 # fix for windows
 if((CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_HOST_SYSTEM_NAME STREQUAL "CYGWIN"))
-#message(STATUS "System host: ${CMAKE_HOST_SYSTEM_NAME}")
-#include(windows_fix.cmake)
 set(CMAKE_C_COMPILER_WORKS 1)
 set(CMAKE_CXX_COMPILER_WORKS 1)
 endif()
