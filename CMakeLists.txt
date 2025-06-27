@@ -46,13 +46,19 @@ set(CMAKE_CXX_STANDARD 17)
 pico_sdk_init()
 
 # executable
-add_executable(${PROJECT_NAME} main.c)
+add_executable(${PROJECT_NAME} main.c
+                               spi/spi.c)
 
 # defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE TEST_DEF=1)
 
+# includes
+target_include_directories(${PROJECT_NAME} PRIVATE .)
+
 # libraries
-target_link_libraries(${PROJECT_NAME} pico_stdlib)
+target_link_libraries(${PROJECT_NAME} pico_stdlib
+                                      hardware_spi
+                                      hardware_dma)
 
 # pico SW FP.
 pico_set_float_implementation(${PROJECT_NAME} pico)
