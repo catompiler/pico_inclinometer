@@ -34,7 +34,18 @@ endif()
 include(pico_sdk_import.cmake)
 
 # project name
-project(pico_inclinometer)
+project(pico_inclinometer C CXX ASM)
+
+# Flags for each build type
+# Debug
+set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -Og -ggdb")
+# Release
+set(CMAKE_C_FLAGS_RELEASE_INIT "-Wall -O2")
+
+# build type
+if(NOT DEFINED CMAKE_BUILD_TYPE)
+set(CMAKE_BUILD_TYPE Debug)
+endif()
 
 # standards
 # C
@@ -50,7 +61,7 @@ add_executable(${PROJECT_NAME} main.c
                                spi/spi.c)
 
 # defines
-target_compile_definitions(${PROJECT_NAME} PRIVATE TEST_DEF=1)
+target_compile_definitions(${PROJECT_NAME} PRIVATE PICO_RP2040=1)
 
 # includes
 target_include_directories(${PROJECT_NAME} PRIVATE .)
@@ -58,7 +69,8 @@ target_include_directories(${PROJECT_NAME} PRIVATE .)
 # libraries
 target_link_libraries(${PROJECT_NAME} pico_stdlib
                                       hardware_spi
-                                      hardware_dma)
+                                      hardware_dma
+                                      hardware_irq)
 
 # pico SW FP.
 pico_set_float_implementation(${PROJECT_NAME} pico)

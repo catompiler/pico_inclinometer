@@ -158,22 +158,22 @@ ALWAYS_INLINE static void spi_bus_er_it_set_enabled(spi_bus_t* spi, bool enabled
 
 ALWAYS_INLINE static const void* spi_bus_rx_reg_ptr(spi_bus_t* spi)
 {
-    return (const void*)&spi->spi_device->SSPDR;
+    return (const void*)&spi->spi_device->dr;
 }
 
 ALWAYS_INLINE static void* spi_bus_tx_reg_ptr(spi_bus_t* spi)
 {
-    return (void*)&spi->spi_device->SSPDR;
+    return (void*)&spi->spi_device->dr;
 }
 
 static void spi_bus_write_transmit_data(spi_bus_t* spi, uint16_t data)
 {
-    spi->spi_device->SSPDR = data;
+    spi->spi_device->dr = data;
 }
 
 static uint16_t spi_bus_read_received_data(spi_bus_t* spi)
 {
-    return spi->spi_device->SSPDR;
+    return spi->spi_device->dr;
 }
 
 
@@ -193,6 +193,59 @@ ALWAYS_INLINE static void spi_bus_frame_begin(spi_bus_t* spi)
 
 ALWAYS_INLINE static void spi_bus_frame_end(spi_bus_t* spi)
 {
+}
+
+
+MAYBE_UNUSED
+ALWAYS_INLINE static bool spi_bus_tx_dma_enabled(spi_bus_t* spi)
+{
+    return (spi->spi_device->dmacr & SPI_SSPDMACR_TXDMAE_BITS) != 0;
+}
+
+ALWAYS_INLINE static void spi_bus_tx_dma_enable(spi_bus_t* spi)
+{
+    spi->spi_device->dmacr |= SPI_SSPDMACR_TXDMAE_BITS;
+}
+
+ALWAYS_INLINE static void spi_bus_tx_dma_disable(spi_bus_t* spi)
+{
+    spi->spi_device->dmacr &= ~SPI_SSPDMACR_TXDMAE_BITS;
+}
+
+MAYBE_UNUSED
+ALWAYS_INLINE static void spi_bus_tx_dma_set_enabled(spi_bus_t* spi, bool enabled)
+{
+    if(enabled) spi_bus_tx_dma_enable(spi);
+    else spi_bus_tx_dma_disable(spi);
+}
+
+
+MAYBE_UNUSED
+ALWAYS_INLINE static bool spi_bus_rx_dma_enabled(spi_bus_t* spi)
+{
+    return (spi->spi_device->dmacr & SPI_SSPDMACR_RXDMAE_BITS) != 0;
+}
+
+ALWAYS_INLINE static void spi_bus_rx_dma_enable(spi_bus_t* spi)
+{
+    spi->spi_device->dmacr |= SPI_SSPDMACR_RXDMAE_BITS;
+}
+
+ALWAYS_INLINE static void spi_bus_rx_dma_disable(spi_bus_t* spi)
+{
+    spi->spi_device->dmacr &= ~SPI_SSPDMACR_RXDMAE_BITS;
+}
+
+MAYBE_UNUSED
+ALWAYS_INLINE static void spi_bus_rx_dma_set_enabled(spi_bus_t* spi, bool enabled)
+{
+    if(enabled) spi_bus_rx_dma_enable(spi);
+    else spi_bus_rx_dma_disable(spi);
+}
+
+ALWAYS_INLINE static bool spi_bus_dma_channel_has_error(uint channel)
+{
+    return (dma_channel_hw_addr(channel)->ctrl_trig & DMA_CH0_CTRL_TRIG_AHB_ERROR_BITS) != 0;
 }
 
 
@@ -231,33 +284,26 @@ err_t spi_bus_init(spi_bus_t* spi, spi_bus_init_t* init)
 
 static void spi_bus_dma_rxtx_config(spi_bus_t* spi, void* rx_address, const void* tx_address, size_t size)
 {
-    dma_transfer_width_t tf_w = spi_bus_is_frame_16bit(spi) ? DMA_TRANSFER_WIDTH_16_BIT : DMA_TRANSFER_WIDTH_8_BIT;
-    dma_addr_inc_t rx_addr_inc = (rx_address != NULL) ? DMA_ADDR_INC : DMA_ADDR_NO_CHANGE;
-    dma_addr_inc_t tx_addr_inc = (tx_address != NULL) ? DMA_ADDR_INC : DMA_ADDR_NO_CHANGE;
+    enum dma_channel_transfer_size tf_w = spi_bus_is_frame_16bit(spi) ? DMA_SIZE_16 : DMA_SIZE_8;
+    bool rx_addr_inc = (rx_address != NULL) ? true : false;
+    bool tx_addr_inc = (tx_address != NULL) ? true : false;
+
+    dma_channel_config c;
 
     // RX.
     if(spi->dma_rx_locked){
         
         if(rx_address == NULL) rx_address = &spi_rx_default_data;
 
-        dma_int_clear_pending_requests(spi->dma_rx_ch_n);
-        dma_channel_set_block_transfer_size(spi->dma_rx_channel, size);
-        dma_channel_set_source_address(spi->dma_rx_channel, spi_bus_rx_reg_ptr(spi));
-        dma_channel_set_dest_address(spi->dma_rx_channel, rx_address);
-        dma_channel_control(spi->dma_rx_channel, DMA_INT_ENABLE,
-                            tf_w, tf_w, rx_addr_inc, DMA_ADDR_NO_CHANGE,
-                            DMA_BURST_TRANS_LEN_8, DMA_BURST_TRANS_LEN_1,
-                            DMA_TRANSFER_PER_TO_MEM_FC_DMA);
-        dma_channel_config(spi->dma_rx_channel, DMA_FLOW_CONTROL_PREFETCH_DISABLED, DMA_FIFO_SINGLE_DATA_FOR_BURST, // DMA_FLOW_CONTROL_PREFETCH_DISABLED // DMA_FIFO_SINGLE_DATA_FOR_BURST
-                           0, spi->dma_rx_line_n,
-                           DMA_PRIOR_DEFAULT, DMA_HS_SOFTWARE, DMA_HS_HARDWARE, DMA_HS_ACTIVE_HIGH, DMA_HS_ACTIVE_HIGH, //DMA_HS_HARDWARE
-                           DMA_BURST_LEN_NO_LIMIT);
-        dma_int_mask_set_transfer_complete(spi->dma_rx_ch_n);
-        //dma_channel_enable(spi->dma_rx_ch_n);
+        c = dma_channel_get_default_config(spi->dma_rx_channel);
+        channel_config_set_dreq(&c, spi->dma_rx_dreq);
+        channel_config_set_transfer_data_size(&c, tf_w);
+        channel_config_set_write_increment(&c, rx_addr_inc);
+        channel_config_set_read_increment(&c, false);
+        channel_config_set_enable(&c, true);
 
-        dma_request_line_overrun_clear(spi->dma_rx_line_n);
-        dma_request_line_set_source(spi->dma_rx_line_n, spi->dma_rx_line_req_n);
-        dma_request_line_enable(spi->dma_rx_line_n);
+        dma_channel_configure(spi->dma_rx_channel, &c, rx_address, spi_bus_rx_reg_ptr(spi), size, false);
+        dma_irqn_set_channel_enabled(spi->dma_rx_irq_index, spi->dma_rx_channel, true);
     }
     
     // TX.
@@ -265,24 +311,15 @@ static void spi_bus_dma_rxtx_config(spi_bus_t* spi, void* rx_address, const void
         
         if(tx_address == NULL) tx_address = &spi->tx_default;
 
-        dma_int_clear_pending_requests(spi->dma_tx_ch_n);
-        dma_channel_set_block_transfer_size(spi->dma_tx_channel, size);
-        dma_channel_set_source_address(spi->dma_tx_channel, tx_address);
-        dma_channel_set_dest_address(spi->dma_tx_channel, spi_bus_tx_reg_ptr(spi));
-        dma_channel_control(spi->dma_tx_channel, DMA_INT_ENABLE,
-                            tf_w, tf_w, DMA_ADDR_NO_CHANGE, tx_addr_inc,
-                            DMA_BURST_TRANS_LEN_1, DMA_BURST_TRANS_LEN_8,
-                            DMA_TRANSFER_MEM_TO_PER_FC_DMA);
-        dma_channel_config(spi->dma_tx_channel, DMA_FLOW_CONTROL_PREFETCH_DISABLED, DMA_FIFO_SINGLE_DATA_FOR_BURST, // DMA_FLOW_CONTROL_PREFETCH_DISABLED // DMA_FIFO_SINGLE_DATA_FOR_BURST
-                           spi->dma_tx_line_n, 0,
-                           DMA_PRIOR_DEFAULT, DMA_HS_HARDWARE, DMA_HS_SOFTWARE, DMA_HS_ACTIVE_HIGH, DMA_HS_ACTIVE_HIGH, //DMA_HS_HARDWARE
-                           DMA_BURST_LEN_NO_LIMIT);
-        dma_int_mask_set_transfer_complete(spi->dma_tx_ch_n);
-        //dma_channel_enable(spi->dma_tx_ch_n);
+        c = dma_channel_get_default_config(spi->dma_tx_channel);
+        channel_config_set_dreq(&c, spi->dma_tx_dreq);
+        channel_config_set_transfer_data_size(&c, tf_w);
+        channel_config_set_write_increment(&c, false);
+        channel_config_set_read_increment(&c, tx_addr_inc);
+        channel_config_set_enable(&c, true);
 
-        dma_request_line_overrun_clear(spi->dma_tx_line_n);
-        dma_request_line_set_source(spi->dma_tx_line_n, spi->dma_tx_line_req_n);
-        dma_request_line_enable(spi->dma_tx_line_n);
+        dma_channel_configure(spi->dma_tx_channel, &c, spi_bus_tx_reg_ptr(spi), tx_address, size, false);
+        dma_irqn_set_channel_enabled(spi->dma_tx_irq_index, spi->dma_tx_channel, true);
     }
 }
 
@@ -292,17 +329,15 @@ ALWAYS_INLINE static void spi_bus_dma_start(spi_bus_t* spi)
 
     if(spi->dma_rx_locked){
         spi_bus_clear_rx_events(spi);
-        spi_bus_rx_it_enable(spi);
-        //spi_bus_trigger_rx_req(spi);
-        //dma_request_line_enable(spi->dma_rx_line_n);
-        dma_channel_enable(spi->dma_rx_ch_n);
+        spi_bus_rx_dma_enable(spi);
+        //spi_bus_rx_it_enable(spi);
+        dma_channel_start(spi->dma_rx_channel);
     }
     if(spi->dma_tx_locked){
         spi_bus_clear_tx_events(spi);
-        spi_bus_tx_it_enable(spi);
-        spi_bus_trigger_tx_req(spi);
-        //dma_request_line_enable(spi->dma_tx_line_n);
-        dma_channel_enable(spi->dma_tx_ch_n);
+        spi_bus_tx_dma_enable(spi);
+        //spi_bus_tx_it_enable(spi);
+        dma_channel_start(spi->dma_tx_channel);
     }
 }
 
@@ -311,8 +346,16 @@ ALWAYS_INLINE static void spi_bus_dma_stop_rx(spi_bus_t* spi)
 {
     if(spi->dma_rx_locked){
         spi_bus_rx_it_disable(spi);
-        dma_channel_disable(spi->dma_rx_ch_n);
-        dma_request_line_disable(spi->dma_rx_line_n);
+        spi_bus_rx_dma_disable(spi);
+
+        dma_irqn_set_channel_enabled(spi->dma_rx_irq_index, spi->dma_rx_channel, false);
+
+        if(dma_channel_hw_addr(spi->dma_rx_channel)->ctrl_trig & DMA_CH0_CTRL_TRIG_BUSY_BITS){
+            dma_channel_abort(spi->dma_rx_channel);
+            dma_irqn_acknowledge_channel(spi->dma_rx_irq_index, spi->dma_rx_channel);
+        }
+
+        //dma_channel_cleanup(spi->dma_rx_channel);
     }
 }
 
@@ -320,8 +363,16 @@ ALWAYS_INLINE static void spi_bus_dma_stop_tx(spi_bus_t* spi)
 {
     if(spi->dma_tx_locked){
         spi_bus_tx_it_disable(spi);
-        dma_channel_disable(spi->dma_tx_ch_n);
-        dma_request_line_disable(spi->dma_tx_line_n);
+        spi_bus_tx_dma_disable(spi);
+
+        dma_irqn_set_channel_enabled(spi->dma_tx_irq_index, spi->dma_tx_channel, false);
+        
+        if(dma_channel_hw_addr(spi->dma_tx_channel)->ctrl_trig & DMA_CH0_CTRL_TRIG_BUSY_BITS){
+            dma_channel_abort(spi->dma_tx_channel);
+            dma_irqn_acknowledge_channel(spi->dma_tx_irq_index, spi->dma_tx_channel);
+        }
+
+        //dma_channel_cleanup(spi->dma_tx_channel);
     }
 }
 
@@ -331,25 +382,34 @@ ALWAYS_INLINE static void spi_bus_dma_stop(spi_bus_t* spi)
     spi_bus_dma_stop_tx(spi);
 }
 
+static bool spi_bus_dma_channel_trylock(uint channel)
+{
+    if(dma_channel_is_claimed(channel)) return false;
+    dma_channel_claim(channel);
+    return true;
+}
+
+static void spi_bus_dma_channel_unlock(uint channel)
+{
+    dma_channel_unclaim(channel);
+}
+
 static bool spi_bus_dma_lock_channels(spi_bus_t* spi, bool lock_rx, bool lock_tx)
 {
     if(lock_rx){
-        spi->dma_rx_locked = dma_channel_trylock(spi->dma_rx_ch_n);
+        spi->dma_rx_locked = spi_bus_dma_channel_trylock(spi->dma_rx_channel);
         if(!spi->dma_rx_locked) return false;
     }
     if(lock_tx){
-        spi->dma_tx_locked = dma_channel_trylock(spi->dma_tx_ch_n);
+        spi->dma_tx_locked = spi_bus_dma_channel_trylock(spi->dma_tx_channel);
         if(!spi->dma_tx_locked){
             if(spi->dma_rx_locked){
-                dma_channel_unlock(spi->dma_rx_ch_n);
+                spi_bus_dma_channel_unlock(spi->dma_rx_channel);
                 spi->dma_rx_locked = false;
             }
             return false;
         }
     }
-
-    if(lock_rx) dma_set_int_callback(spi->dma_rx_ch_n, (dma_callback_t)spi_bus_dma_rx_channel_irq_handler, (void*)spi);
-    if(lock_tx) dma_set_int_callback(spi->dma_tx_ch_n, (dma_callback_t)spi_bus_dma_tx_channel_irq_handler, (void*)spi);
 
     return true;
 }
@@ -357,15 +417,13 @@ static bool spi_bus_dma_lock_channels(spi_bus_t* spi, bool lock_rx, bool lock_tx
 static void spi_bus_dma_unlock_channels(spi_bus_t* spi)
 {
     if(spi->dma_rx_locked){
-        dma_set_int_callback(spi->dma_rx_ch_n, NULL, NULL);
-        dma_channel_deinit(spi->dma_rx_channel);
-        dma_channel_unlock(spi->dma_rx_ch_n);
+        dma_channel_cleanup(spi->dma_rx_channel);
+        spi_bus_dma_channel_unlock(spi->dma_rx_channel);
         spi->dma_rx_locked = false;
     }
     if(spi->dma_tx_locked){
-        dma_set_int_callback(spi->dma_tx_ch_n, NULL, NULL);
-        dma_channel_deinit(spi->dma_tx_channel);
-        dma_channel_unlock(spi->dma_tx_ch_n);
+        dma_channel_cleanup(spi->dma_tx_channel);
+        spi_bus_dma_channel_unlock(spi->dma_tx_channel);
         spi->dma_tx_locked = false;
     }
 }
@@ -445,33 +503,28 @@ void spi_bus_irq_handler(spi_bus_t* spi)
     printf("[SPI] ERR\r\n");
 #endif
     
-    uint16_t PSR = spi->spi_device->PSR;
+    uint16_t SR = spi->spi_device->mis;
     
-    if(PSR & USIC_CH_PSR_SSCMode_DLIF_Msk){
+    if(SR & SPI_SSPMIS_RORMIS_BITS){
         // Clear flag.
-        spi->spi_device->PSCR = USIC_CH_PSCR_CDLIF_Msk;
+        spi->spi_device->icr = SPI_SSPICR_RORIC_BITS;
         
         spi->errors |= SPI_ERROR_OVERRUN;
 
     }
-    if(PSR & USIC_CH_PSR_SSCMode_DX2TEV_Msk){
-        spi->spi_device->PSCR = USIC_CH_PSCR_CST3_Msk;
+    if(SR & SPI_SSPMIS_RTMIS_BITS){
+        spi->spi_device->icr = SPI_SSPICR_RTIC_BITS;
         
-        spi->errors |= SPI_ERROR_MASTER_MODE_FAULT;
+        spi->errors |= SPI_ERROR_TIMEOUT;
     }
-//    if(PSR & SPI_SR_CRCERR){
-//        // Clear flag.
-//
-//        spi->errors |= SPI_ERROR_CRC;
-//    }
 
-    if(PSR & (USIC_CH_PSR_SSCMode_RIF_Msk | USIC_CH_PSR_SSCMode_AIF_Msk)){
+    if(SR & SPI_SSPMIS_RXMIS_BITS){
         // Clear flag.
         spi_bus_clear_rx_events(spi);
         // Disable interrupt.
         spi_bus_rx_it_disable(spi);
         
-    }else if(PSR & USIC_CH_PSR_SSCMode_TBIF_Msk){
+    }else if(SR & SPI_SSPMIS_TXMIS_BITS){
         // Clear flag.
         spi_bus_clear_tx_events(spi);
         // Disable interrupt.
@@ -498,9 +551,9 @@ bool spi_bus_dma_rx_channel_irq_handler(spi_bus_t* spi)
     // Если мы не можем принимать - возврат.
     if(!can_rx || !spi->dma_rx_locked) return false;
 
-    if(dma_int_status_transfer_complete(spi->dma_rx_ch_n)){
+    if(!spi_bus_dma_channel_has_error(spi->dma_rx_channel)){
 
-        dma_int_clear_transfer_complete(spi->dma_rx_ch_n);
+        dma_irqn_acknowledge_channel(spi->dma_rx_irq_index, spi->dma_rx_channel);
         
 //        if(!spi_bus_is_crc_enabled(spi)){
             spi_bus_transfer_done(spi);
@@ -508,9 +561,9 @@ bool spi_bus_dma_rx_channel_irq_handler(spi_bus_t* spi)
 //            spi_bus_rx_it_enable(spi);
 //        }
 
-    }else if(dma_int_status_error(spi->dma_rx_ch_n)){
+    }else /*if(spi_bus_dma_channel_has_error(spi->dma_rx_channel))*/{
 
-        dma_int_clear_error(spi->dma_rx_ch_n);
+        dma_irqn_acknowledge_channel(spi->dma_rx_irq_index, spi->dma_rx_channel);
         
         spi->errors |= SPI_ERROR_DMA;
         spi_bus_transfer_error(spi);
@@ -532,9 +585,9 @@ bool spi_bus_dma_tx_channel_irq_handler(spi_bus_t* spi)
     // Если мы не можем передавать - возврат.
     if(!can_tx || !spi->dma_tx_locked) return false;
 
-    if(dma_int_status_transfer_complete(spi->dma_tx_ch_n)){
+    if(!spi_bus_dma_channel_has_error(spi->dma_rx_channel)){
 
-        dma_int_clear_transfer_complete(spi->dma_tx_ch_n);
+        dma_irqn_acknowledge_channel(spi->dma_tx_irq_index, spi->dma_tx_channel);
 
         //WAIT_WHILE_TRUE((spi->spi_device->TCSR & USIC_CH_TCSR_TDV_Msk) != 0);
 
@@ -546,9 +599,9 @@ bool spi_bus_dma_tx_channel_irq_handler(spi_bus_t* spi)
 //            }
         }
 
-    }else if(dma_int_status_error(spi->dma_tx_ch_n)){
+    }else /*if(spi_bus_dma_channel_has_error(spi->dma_rx_channel))*/{
 
-        dma_int_clear_error(spi->dma_tx_ch_n);
+        dma_irqn_acknowledge_channel(spi->dma_tx_irq_index, spi->dma_tx_channel);
         
         spi->errors |= SPI_ERROR_DMA;
         spi_bus_transfer_error(spi);
