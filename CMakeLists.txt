@@ -58,7 +58,8 @@ pico_sdk_init()
 
 # executable
 add_executable(${PROJECT_NAME} main.c
-                               spi/spi.c)
+                               spi/spi.c
+                               dma/dma_irq_mux.c)
 
 # defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE PICO_RP2040=1)

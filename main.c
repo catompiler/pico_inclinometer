@@ -3,6 +3,7 @@
 #include "hardware/spi.h"
 #include "hardware/irq.h"
 #include "spi/spi.h"
+#include "dma/dma_irq_mux.h"
 
 
 spi_bus_t spi_test;
@@ -13,7 +14,7 @@ static void spi_irq_handler(void)
     spi_bus_irq_handler(&spi_test);
 }
 
-static void spi_dma_rx_irq_handler(void)
+/*static void spi_dma_rx_irq_handler(void)
 {
     spi_bus_dma_rx_channel_irq_handler(&spi_test);
 }
@@ -21,9 +22,19 @@ static void spi_dma_rx_irq_handler(void)
 static void spi_dma_tx_irq_handler(void)
 {
     spi_bus_dma_tx_channel_irq_handler(&spi_test);
+}*/
+
+
+static void init_dma_irq_mux(void)
+{
+    irq_set_exclusive_handler(DMA_IRQ_0, dma_irq_mux_irq_0_handler);
+    irq_set_priority(DMA_IRQ_0, 0);
+    irq_set_enabled(DMA_IRQ_0, true);
+
+    irq_set_exclusive_handler(DMA_IRQ_1, dma_irq_mux_irq_1_handler);
+    irq_set_priority(DMA_IRQ_1, 0);
+    irq_set_enabled(DMA_IRQ_1, true);
 }
-
-
 
 
 static void init_spi(void)
@@ -37,12 +48,6 @@ static void init_spi(void)
     irq_set_exclusive_handler(SPI0_IRQ, spi_irq_handler);
     irq_set_priority(SPI0_IRQ, 0);
     irq_set_enabled(SPI0_IRQ, true);
-    irq_set_exclusive_handler(DMA_IRQ_0, spi_dma_rx_irq_handler);
-    irq_set_priority(DMA_IRQ_0, 0);
-    irq_set_enabled(DMA_IRQ_0, true);
-    irq_set_exclusive_handler(DMA_IRQ_1, spi_dma_tx_irq_handler);
-    irq_set_priority(DMA_IRQ_1, 0);
-    irq_set_enabled(DMA_IRQ_1, true);
 
     spi_bus_init_t is;
     is.spi_device = spi_get_hw(spi);
@@ -51,7 +56,7 @@ static void init_spi(void)
     is.dma_rx_irq_index = 0;
     is.dma_tx_channel = 1;
     is.dma_tx_dreq = spi_get_dreq(spi, true);
-    is.dma_tx_irq_index = 1;
+    is.dma_tx_irq_index = 0;
     spi_bus_init(&spi_test, &is);
 }
 
@@ -78,6 +83,8 @@ static void test_spi(void)
 
 int main(void)
 {
+    init_dma_irq_mux();
+
     init_spi();
     test_spi();
 

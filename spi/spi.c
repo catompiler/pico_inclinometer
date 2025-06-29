@@ -2,6 +2,7 @@
 #include <stddef.h>
 #include "utils/utils.h"
 #include "defs/defs.h"
+#include "dma/dma_irq_mux.h"
 
 
 //#define SPI_BUS_DEBUG
@@ -411,17 +412,22 @@ static bool spi_bus_dma_lock_channels(spi_bus_t* spi, bool lock_rx, bool lock_tx
         }
     }
 
+    if(lock_rx) dma_irq_mux_set_callback(spi->dma_rx_irq_index, spi->dma_rx_channel, (dma_irq_mux_callback_t)spi_bus_dma_rx_channel_irq_handler, (void*)spi);
+    if(lock_tx) dma_irq_mux_set_callback(spi->dma_tx_irq_index, spi->dma_tx_channel, (dma_irq_mux_callback_t)spi_bus_dma_tx_channel_irq_handler, (void*)spi);
+
     return true;
 }
 
 static void spi_bus_dma_unlock_channels(spi_bus_t* spi)
 {
     if(spi->dma_rx_locked){
+        dma_irq_mux_set_callback(spi->dma_rx_irq_index, spi->dma_rx_channel, NULL, NULL);
         dma_channel_cleanup(spi->dma_rx_channel);
         spi_bus_dma_channel_unlock(spi->dma_rx_channel);
         spi->dma_rx_locked = false;
     }
     if(spi->dma_tx_locked){
+        dma_irq_mux_set_callback(spi->dma_tx_irq_index, spi->dma_tx_channel, NULL, NULL);
         dma_channel_cleanup(spi->dma_tx_channel);
         spi_bus_dma_channel_unlock(spi->dma_tx_channel);
         spi->dma_tx_locked = false;
