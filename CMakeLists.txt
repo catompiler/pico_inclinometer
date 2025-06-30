@@ -19,7 +19,9 @@ cmake_minimum_required(VERSION 3.20)
 # pico platform
 set(PICO_PLATFORM rp2040)
 # pico board
+if(NOT DEFINED PICO_BOARD)
 set(PICO_BOARD pico)#waveshare_rp2040_lcd_1.28)
+endif()
 # pico compiler
 set(PICO_COMPILER pico_arm_cortex_m0plus_gcc)
 
@@ -59,7 +61,9 @@ pico_sdk_init()
 # executable
 add_executable(${PROJECT_NAME} main.c
                                spi/spi.c
-                               dma/dma_irq_mux.c)
+                               dma/dma_irq_mux.c
+                               gc9a01a/gc9a01a.c
+                               future/future.c)
 
 # defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE PICO_RP2040=1)
@@ -68,7 +72,10 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE PICO_RP2040=1)
 target_include_directories(${PROJECT_NAME} PRIVATE .)
 
 # libraries
-target_link_libraries(${PROJECT_NAME} pico_stdlib
+target_link_libraries(${PROJECT_NAME} PRIVATE
+                                      cmsis_core
+                                      pico_stdlib
+                                      pico_time
                                       hardware_spi
                                       hardware_dma
                                       hardware_irq)

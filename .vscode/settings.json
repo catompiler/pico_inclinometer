@@ -40,7 +40,13 @@
     "files.associations": {
         "dma.h": "c",
         "bits.h": "c",
-        "irq.h": "c"
+        "irq.h": "c",
+        "gpio.h": "c",
+        "defs.h": "c",
+        "time.h": "c",
+        "gc9a01a.h": "c",
+        "pico.h": "c",
+        "rp2040.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

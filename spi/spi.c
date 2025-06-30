@@ -353,8 +353,9 @@ ALWAYS_INLINE static void spi_bus_dma_stop_rx(spi_bus_t* spi)
 
         if(dma_channel_hw_addr(spi->dma_rx_channel)->ctrl_trig & DMA_CH0_CTRL_TRIG_BUSY_BITS){
             dma_channel_abort(spi->dma_rx_channel);
-            dma_irqn_acknowledge_channel(spi->dma_rx_irq_index, spi->dma_rx_channel);
         }
+
+        dma_irqn_acknowledge_channel(spi->dma_rx_irq_index, spi->dma_rx_channel);
 
         //dma_channel_cleanup(spi->dma_rx_channel);
     }
@@ -370,8 +371,9 @@ ALWAYS_INLINE static void spi_bus_dma_stop_tx(spi_bus_t* spi)
         
         if(dma_channel_hw_addr(spi->dma_tx_channel)->ctrl_trig & DMA_CH0_CTRL_TRIG_BUSY_BITS){
             dma_channel_abort(spi->dma_tx_channel);
-            dma_irqn_acknowledge_channel(spi->dma_tx_irq_index, spi->dma_tx_channel);
         }
+
+        dma_irqn_acknowledge_channel(spi->dma_tx_irq_index, spi->dma_tx_channel);
 
         //dma_channel_cleanup(spi->dma_tx_channel);
     }
@@ -591,7 +593,7 @@ bool spi_bus_dma_tx_channel_irq_handler(spi_bus_t* spi)
     // Если мы не можем передавать - возврат.
     if(!can_tx || !spi->dma_tx_locked) return false;
 
-    if(!spi_bus_dma_channel_has_error(spi->dma_rx_channel)){
+    if(!spi_bus_dma_channel_has_error(spi->dma_tx_channel)){
 
         dma_irqn_acknowledge_channel(spi->dma_tx_irq_index, spi->dma_tx_channel);
 

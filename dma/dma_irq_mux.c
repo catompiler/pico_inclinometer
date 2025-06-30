@@ -64,13 +64,12 @@ void dma_irq_mux_set_callback(uint irq_index, uint channel, dma_irq_mux_callback
 
 void dma_irq_mux_irq_0_handler(void)
 {
-    uint32_t irq_stat = dma_hw->ints0;
     dma_handler_data_t* handlers = handlers0;
 
     uint32_t ch_mask = 1;
     size_t ch_n = 0;
     for(; ch_n < DMA_CHANNELS_COUNT; ch_n ++, ch_mask <<= 1){
-        if(irq_stat & ch_mask){
+        if(dma_hw->ints0 & ch_mask){
             // Handler data.
             dma_handler_data_t* handler = &handlers[ch_n];
             // Callback.
@@ -79,9 +78,9 @@ void dma_irq_mux_irq_0_handler(void)
             if(callback){
                 callback(handler->user_data);
             } // Else - clear all interrupt flags.
-            //else{
+            else{
                 dma_hw->ints0 = ch_mask;
-            //}
+            }
         }
     }
 }
@@ -89,13 +88,12 @@ void dma_irq_mux_irq_0_handler(void)
 
 void dma_irq_mux_irq_1_handler(void)
 {
-    uint32_t irq_stat = dma_hw->ints1;
     dma_handler_data_t* handlers = handlers1;
 
     uint32_t ch_mask = 1;
     size_t ch_n = 0;
     for(; ch_n < DMA_CHANNELS_COUNT; ch_n ++, ch_mask <<= 1){
-        if(irq_stat & ch_mask){
+        if(dma_hw->ints1 & ch_mask){
             // Handler data.
             dma_handler_data_t* handler = &handlers[ch_n];
             // Callback.
@@ -104,9 +102,9 @@ void dma_irq_mux_irq_1_handler(void)
             if(callback){
                 callback(handler->user_data);
             } // Else - clear all interrupt flags.
-            //else{
+            else{
                 dma_hw->ints1 = ch_mask;
-            //}
+            }
         }
     }
 }
