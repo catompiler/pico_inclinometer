@@ -1,5 +1,4 @@
 #include "gc9a01a.h"
-//#include "RP2040.h"
 #include "hardware/gpio.h"
 #include "utils/utils.h"
 #include "pico/time.h"
@@ -12,8 +11,10 @@
 //#define GC9A01A_GET_MEM_DEBUG
 
 //! Продолжительность ресета.
-#define GC9A01A_RESET_TIME_US  15
-#define GC9A01A_RESET_WAIT_TIME_MS  150
+//#define GC9A01A_RESET_TIME_US  15
+#define GC9A01A_RESET_TIME_MS  150
+//#define GC9A01A_RESET_WAIT_TIME_MS  150
+#define GC9A01A_RESET_WAIT_TIME_MS  500
 //#define GC9A01A_SLEEP_OUT_WAIT_TIME_MS  10
 
 
@@ -190,18 +191,6 @@
 #define GC9A01A_CMD_READ_ID3                    0xdc
 #define GC9A01A_RD_ID3_DATA_SIZE                2
 
-
-#if defined(__REV16)
-#undef __REV16
-#endif
-
-ALWAYS_INLINE static uint32_t __REV16(uint32_t val)
-{
-    return (((val >> 0) & 0xff) << 8 )  |
-           (((val >> 8) & 0xff) << 0)   |
-           (((val >> 16) & 0xff) << 24) |
-           (((val >> 24) & 0xff) << 16);
-}
 
 
 ALWAYS_INLINE static void gpio_set(uint port, uint pin)
@@ -408,7 +397,8 @@ void gc9a01a_reset(gc9a01a_t* tft)
     future_wait(&tft->future);
     
     gpio_reset(tft->rst_gpio, tft->rst_pin);
-    sleep_us(GC9A01A_RESET_TIME_US);
+    //sleep_us(GC9A01A_RESET_TIME_US);
+    sleep_ms(GC9A01A_RESET_TIME_MS);
     gpio_set(tft->rst_gpio, tft->rst_pin);
     
     sleep_ms(GC9A01A_RESET_WAIT_TIME_MS);
@@ -859,7 +849,7 @@ err_t gc9a01a_set_column_address(gc9a01a_t* tft, uint16_t start, uint16_t end)
     if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_CA_DATA_SIZE, &buffer_index);
+    uint8_t* data_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_CA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -870,8 +860,10 @@ err_t gc9a01a_set_column_address(gc9a01a_t* tft, uint16_t start, uint16_t end)
 #endif
     
     *cmd_buf = GC9A01A_CMD_WRITE_COL_ADDRESS;
-    data_buf[0] = __REV16(start);
-    data_buf[1] = __REV16(end);
+    data_buf[0] = (start >> 8) & 0xff;
+    data_buf[1] = start & 0xff;
+    data_buf[2] = (end >> 8) & 0xff;
+    data_buf[3] = end & 0xff;
     
     err = spi_message_init(cmd_msg, SPI_WRITE, cmd_buf, NULL, GC9A01A_CMD_SIZE);
     if(err != E_NO_ERROR) return err;
@@ -909,7 +901,7 @@ err_t gc9a01a_set_page_address(gc9a01a_t* tft, uint16_t start, uint16_t end)
     if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_PGA_DATA_SIZE, &buffer_index);
+    uint8_t* data_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_PGA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -920,8 +912,10 @@ err_t gc9a01a_set_page_address(gc9a01a_t* tft, uint16_t start, uint16_t end)
 #endif
     
     *cmd_buf = GC9A01A_CMD_WRITE_PAGE_ADDRESS;
-    data_buf[0] = __REV16(start);
-    data_buf[1] = __REV16(end);
+    data_buf[0] = (start >> 8) & 0xff;
+    data_buf[1] = start & 0xff;
+    data_buf[2] = (end >> 8) & 0xff;
+    data_buf[3] = end & 0xff;
     
     err = spi_message_init(cmd_msg, SPI_WRITE, cmd_buf, NULL, GC9A01A_CMD_SIZE);
     if(err != E_NO_ERROR) return err;
@@ -1022,7 +1016,7 @@ err_t gc9a01a_set_partial_area(gc9a01a_t* tft, uint16_t start, uint16_t end)
     if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_PLA_DATA_SIZE, &buffer_index);
+    uint8_t* data_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_PLA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -1033,8 +1027,10 @@ err_t gc9a01a_set_partial_area(gc9a01a_t* tft, uint16_t start, uint16_t end)
 #endif
     
     *cmd_buf = GC9A01A_CMD_WRITE_PARTIAL_AREA;
-    data_buf[0] = __REV16(start);
-    data_buf[1] = __REV16(end);
+    data_buf[0] = (start >> 8) & 0xff;
+    data_buf[1] = start & 0xff;
+    data_buf[2] = (end >> 8) & 0xff;
+    data_buf[3] = end & 0xff;
     
     err = spi_message_init(cmd_msg, SPI_WRITE, cmd_buf, NULL, GC9A01A_CMD_SIZE);
     if(err != E_NO_ERROR) return err;
@@ -1072,7 +1068,7 @@ err_t gc9a01a_set_vertical_scrolling(gc9a01a_t* tft, uint16_t tfa, uint16_t vsa)
     if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_VERT_SCROLL_DEF_DATA_SIZE, &buffer_index);
+    uint8_t* data_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_VERT_SCROLL_DEF_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -1083,8 +1079,10 @@ err_t gc9a01a_set_vertical_scrolling(gc9a01a_t* tft, uint16_t tfa, uint16_t vsa)
 #endif
     
     *cmd_buf = GC9A01A_CMD_WRITE_VERTICAL_SCROLL_DEF;
-    data_buf[0] = __REV16(tfa);
-    data_buf[1] = __REV16(vsa);
+    data_buf[0] = (tfa >> 8) & 0xff;
+    data_buf[1] = tfa & 0xff;
+    data_buf[2] = (vsa >> 8) & 0xff;
+    data_buf[3] = vsa & 0xff;
     
     err = spi_message_init(cmd_msg, SPI_WRITE, cmd_buf, NULL, GC9A01A_CMD_SIZE);
     if(err != E_NO_ERROR) return err;
@@ -1271,7 +1269,7 @@ err_t gc9a01a_set_vertical_scrolling_start_address(gc9a01a_t* tft, uint16_t vsp)
     if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_VS_START_ADDR_DATA_SIZE, &buffer_index);
+    uint8_t* data_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_VS_START_ADDR_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -1282,7 +1280,8 @@ err_t gc9a01a_set_vertical_scrolling_start_address(gc9a01a_t* tft, uint16_t vsp)
 #endif
     
     *cmd_buf = GC9A01A_CMD_WRITE_VERT_SCROLL_START_ADDR;
-    data_buf[0] = __REV16(vsp);
+    data_buf[0] = (vsp >> 8) & 0xff;
+    data_buf[1] = vsp & 0xff;
     
     err = spi_message_init(cmd_msg, SPI_WRITE, cmd_buf, NULL, GC9A01A_CMD_SIZE);
     if(err != E_NO_ERROR) return err;
@@ -1439,7 +1438,7 @@ err_t gc9a01a_set_tear_scanline(gc9a01a_t* tft, uint16_t sts)
     if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_SET_TEAR_SL_DATA_SIZE, &buffer_index);
+    uint8_t* data_buf = gc9a01a_get_buffer(tft, GC9A01A_SET_TEAR_SL_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -1450,7 +1449,8 @@ err_t gc9a01a_set_tear_scanline(gc9a01a_t* tft, uint16_t sts)
 #endif
     
     *cmd_buf = GC9A01A_CMD_SET_TEAR_SCANLINE;
-    data_buf[0] = __REV16(sts & 0x1FF);
+    data_buf[0] = (sts >> 8) & 0xff;
+    data_buf[1] = sts & 0xff;
     
     err = spi_message_init(cmd_msg, SPI_WRITE, cmd_buf, NULL, GC9A01A_CMD_SIZE);
     if(err != E_NO_ERROR) return err;
@@ -1515,7 +1515,7 @@ err_t gc9a01a_get_scanline(gc9a01a_t* tft, uint16_t* gts)
     err = gc9a01a_wait(tft);
     if(err != E_NO_ERROR) return err;
     
-    *gts = __REV16(*((uint16_t*)&data_buf[1])) & 0x1FF;
+    *gts = (((uint16_t)data_buf[1] << 8) | (data_buf[2])) & 0x1ff;
     
     return E_NO_ERROR;
 }
@@ -1893,7 +1893,7 @@ err_t gc9a01a_set_pixel(gc9a01a_t* tft, uint16_t x, uint16_t y, const void* pixe
     if(cmd_col_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_col_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_CA_DATA_SIZE, &buffer_index);
+    uint8_t* data_col_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_CA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_col_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -1916,7 +1916,7 @@ err_t gc9a01a_set_pixel(gc9a01a_t* tft, uint16_t x, uint16_t y, const void* pixe
     if(cmd_page_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_page_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_PGA_DATA_SIZE, &buffer_index);
+    uint8_t* data_page_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_PGA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_page_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -1950,12 +1950,16 @@ err_t gc9a01a_set_pixel(gc9a01a_t* tft, uint16_t x, uint16_t y, const void* pixe
 #endif
     
     *cmd_col_buf = GC9A01A_CMD_WRITE_COL_ADDRESS;
-    data_col_buf[0] = __REV16(x);
-    data_col_buf[1] = __REV16(x);
+    data_col_buf[0] = (x >> 8) & 0xff;
+    data_col_buf[1] = x & 0xff;
+    data_col_buf[2] = data_col_buf[0];
+    data_col_buf[3] = data_col_buf[1];
     
     *cmd_page_buf = GC9A01A_CMD_WRITE_PAGE_ADDRESS;
-    data_page_buf[0] = __REV16(y);
-    data_page_buf[1] = __REV16(y);
+    data_page_buf[0] = (y >> 8) & 0xff;
+    data_page_buf[1] = y & 0xff;
+    data_page_buf[2] = data_page_buf[0];
+    data_page_buf[3] = data_page_buf[1];
     
     *cmd_pixel_buf = GC9A01A_CMD_WRITE_MEMORY;
     data_pixel_buf[0] = ((uint8_t*)pixel)[0];
@@ -2014,7 +2018,7 @@ err_t gc9a01a_write_region(gc9a01a_t* tft, uint16_t x0, uint16_t y0, uint16_t x1
     if(cmd_col_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_col_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_CA_DATA_SIZE, &buffer_index);
+    uint8_t* data_col_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_CA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_col_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -2037,7 +2041,7 @@ err_t gc9a01a_write_region(gc9a01a_t* tft, uint16_t x0, uint16_t y0, uint16_t x1
     if(cmd_page_msg == NULL) return E_OUT_OF_MEMORY;
 #endif
     
-    uint16_t* data_page_buf = (uint16_t*)gc9a01a_get_buffer(tft, GC9A01A_WR_PGA_DATA_SIZE, &buffer_index);
+    uint8_t* data_page_buf = gc9a01a_get_buffer(tft, GC9A01A_WR_PGA_DATA_SIZE, &buffer_index);
 #ifdef GC9A01A_GET_MEM_DEBUG
     if(data_page_buf == NULL) return E_OUT_OF_MEMORY;
 #endif
@@ -2066,12 +2070,16 @@ err_t gc9a01a_write_region(gc9a01a_t* tft, uint16_t x0, uint16_t y0, uint16_t x1
 #endif
     
     *cmd_col_buf = GC9A01A_CMD_WRITE_COL_ADDRESS;
-    data_col_buf[0] = __REV16(x0);
-    data_col_buf[1] = __REV16(x1);
+    data_col_buf[0] = (x0 >> 8) & 0xff;
+    data_col_buf[1] = x0 & 0xff;
+    data_col_buf[2] = (x1 >> 8) & 0xff;
+    data_col_buf[3] = x1 & 0xff;
     
     *cmd_page_buf = GC9A01A_CMD_WRITE_PAGE_ADDRESS;
-    data_page_buf[0] = __REV16(y0);
-    data_page_buf[1] = __REV16(y1);
+    data_page_buf[0] = (y0 >> 8) & 0xff;
+    data_page_buf[1] = y0 & 0xff;
+    data_page_buf[2] = (y1 >> 8) & 0xff;
+    data_page_buf[3] = y1 & 0xff;
     
     *cmd_pixel_buf = GC9A01A_CMD_WRITE_MEMORY;
     

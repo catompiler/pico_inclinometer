@@ -46,7 +46,21 @@
         "time.h": "c",
         "gc9a01a.h": "c",
         "pico.h": "c",
-        "rp2040.h": "c"
+        "rp2040.h": "c",
+        "array": "c",
+        "deque": "c",
+        "forward_list": "c",
+        "string": "c",
+        "unordered_map": "c",
+        "vector": "c",
+        "string_view": "c",
+        "format": "c",
+        "initializer_list": "c",
+        "ranges": "c",
+        "span": "c",
+        "text_encoding": "c",
+        "regex": "c",
+        "valarray": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

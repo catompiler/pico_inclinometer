@@ -138,6 +138,7 @@ typedef enum _Gc9a01a_Horizontal_Refresh {
 
 //! Формат пиксела интерфейса.
 typedef enum _Gc9a01a_Pixel_Format {
+    GC9A01A_PIXEL_12BIT = 3, //!< Пиксел 12 бит, только для MCU.
     GC9A01A_PIXEL_16BIT = 5, //!< Пиксел 16 бит.
     GC9A01A_PIXEL_18BIT = 6 //!< Пиксел 18 бит.
 } gc9a01a_pixel_format_t;

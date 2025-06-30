@@ -65,8 +65,17 @@ add_executable(${PROJECT_NAME} main.c
                                gc9a01a/gc9a01a.c
                                future/future.c)
 
+# compiler flags
+target_compile_options(${PROJECT_NAME} PRIVATE
+                                       -mno-unaligned-access)
+
 # defines
-target_compile_definitions(${PROJECT_NAME} PRIVATE PICO_RP2040=1)
+target_compile_definitions(${PROJECT_NAME} PRIVATE
+                                           PICO_RP2040=1)
+
+# linker flags
+target_link_options(${PROJECT_NAME} PRIVATE
+                                    )
 
 # includes
 target_include_directories(${PROJECT_NAME} PRIVATE .)

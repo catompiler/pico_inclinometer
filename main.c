@@ -50,13 +50,19 @@ static void init_spi(void)
 {
     spi_inst_t* spi = spi0;
 
-    spi_init(spi, 100*1000*1000);
+    spi_init(spi, 10*1000*1000);
     spi_set_format(spi, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     //hw_set_bits(&spi_get_hw(spi)->cr1, SPI_SSPCR1_LBM_BITS); // loopback.
 
     // mosi
+    gpio_init(TFT_MOSI);
+    gpio_set_dir(TFT_MOSI, true);
+    gpio_put(TFT_MOSI, 0);
     gpio_set_function(TFT_MOSI, GPIO_FUNC_SPI);
-    // miso
+    // sck
+    gpio_init(TFT_SCK);
+    gpio_set_dir(TFT_SCK, true);
+    gpio_put(TFT_SCK, 0);
     gpio_set_function(TFT_SCK, GPIO_FUNC_SPI);
 
     irq_set_exclusive_handler(SPI0_IRQ, spi_irq_handler);
@@ -114,19 +120,40 @@ static void init_tft(void)
 static void setup_tft(void)
 {
     gc9a01a_reset(&tft);
+    sleep_ms(500);
+
+    gc9a01a_sleep_out(&tft);
+    sleep_ms(500);
+
+    gc9a01a_idle_off(&tft);
+    sleep_ms(500);
 
     gc9a01a_madctl_t madctl;
     madctl.row_address_order = GC9A01A_ROW_TOP_TO_BOTTOM;//GC9A01A_ROW_BOTTOM_TO_TOP
     madctl.col_address_order = GC9A01A_COL_LEFT_TO_RIGHT;//GC9A01A_COL_RIGHT_TO_LEFT
-    madctl.row_col_exchange = GC9A01A_ROW_COL_REVERSE_MODE;
+    madctl.row_col_exchange = GC9A01A_ROW_COL_NORMAL_MODE;
     madctl.vertical_refresh = GC9A01A_REFRESH_TOP_TO_BOTTOM;
-    madctl.color_order = GC9A01A_COLOR_ORDER_BGR;
+    madctl.color_order = GC9A01A_COLOR_ORDER_RGB;
     madctl.horizontal_refresh = GC9A01A_REFRESH_LEFT_TO_RIGHT;
-
     gc9a01a_set_madctl(&tft, &madctl);
+
+    gc9a01a_display_control_t dispctrl;
+    dispctrl.backlight_mode = GC9A01A_BACKLIGHT_ON;
+    dispctrl.brightness_control = GC9A01A_BRIGHTNESS_CONTROL_ON;
+    dispctrl.display_dimming = GC9A01A_DISPLAY_DIMMING_ON;
+    gc9a01a_set_display_control(&tft, &dispctrl);
+
+    gc9a01a_set_brightness(&tft, 255);
+
+    gc9a01a_normal_mode(&tft);
+
+    gc9a01a_inversion_off(&tft);
+
     gc9a01a_set_pixel_format(&tft, GC9A01A_PIXEL_16BIT, GC9A01A_PIXEL_16BIT);
-    gc9a01a_sleep_out(&tft);
+
+    sleep_ms(500);
     gc9a01a_display_on(&tft);
+    sleep_ms(500);
 
     //gc9a01a_cache_fill(&tft_cache, GC9A01A_MAKE_RGB565(0, 0, 0));
     // painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
@@ -134,6 +161,7 @@ static void setup_tft(void)
     // painter_fill(&painter);
 }
 
+static uint16_t pixel = GC9A01A_MAKE_RGB565(0x7f, 0x7f, 0x7f);
 
 int main(void)
 {
@@ -143,17 +171,15 @@ int main(void)
     init_tft();
     setup_tft();
 
-    static uint16_t pixel = GC9A01A_MAKE_RGB565(00, 0xff, 00);
-    gc9a01a_set_pixel(&tft, 119, 119, &pixel, 2);
-
-    gpio_init(PICO_DEFAULT_LED_PIN);
-    gpio_set_dir(PICO_DEFAULT_LED_PIN, true);
+    
     
     for(;;){
-        gpio_put(PICO_DEFAULT_LED_PIN, false);
-        sleep_ms(500);
-        gpio_put(PICO_DEFAULT_LED_PIN, true);
-        sleep_ms(500);
+        for(uint y = 0; y < 240; y ++){
+            for(uint x = 0; x < 240; x ++){
+                gc9a01a_set_pixel(&tft, x, y, &pixel, 2);
+            }
+        }
+        sleep_ms(1000);
     }
 
     return 0;
