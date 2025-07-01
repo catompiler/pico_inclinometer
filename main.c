@@ -5,6 +5,11 @@
 #include "dma/dma_irq_mux.h"
 #include "spi/spi.h"
 #include "gc9a01a/gc9a01a.h"
+#include "gc9a01a/gc9a01a_cache.h"
+#include "gc9a01a/gc9a01a_cache_vbuf.h"
+#include "graphics/graphics.h"
+#include "graphics/painter.h"
+#include "anime_image_240.h"
 
 
 #define TFT_MOSI 11
@@ -16,7 +21,44 @@
 
 
 spi_bus_t spi_tft;
-gc9a01a_t tft;
+
+/*
+ * Экран.
+ */
+//! Размер пиксела - 2 байта (16 бит).
+#define TFT_PIXEL_SIZE 2
+//! Ширина экрана.
+#define TFT_WIDTH 320
+#define TFT_HEIGHT 240
+//! Число буферов кэша TFT.
+#define TFT_CACHE_BUFS_COUNT 2
+//! Размер первого буфера.
+#define TFT_CACHE_BUF0_PIXELS 240
+#define TFT_CACHE_BUF0_SIZE (TFT_CACHE_BUF0_PIXELS * TFT_PIXEL_SIZE)
+//! Размер второго буфера.
+#define TFT_CACHE_BUF1_PIXELS 240
+#define TFT_CACHE_BUF1_SIZE (TFT_CACHE_BUF1_PIXELS * TFT_PIXEL_SIZE)
+// TFT.
+static gc9a01a_t tft;
+//! Первый буфер кэша TFT.
+static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
+//! Второй буфер кэша TFT.
+static uint8_t tft_cache_buf_data1[TFT_CACHE_BUF1_SIZE];
+
+//! Буферы кэша TFT.
+static gc9a01a_cache_buffer_t tft_cache_bufs[TFT_CACHE_BUFS_COUNT] = {
+    make_gc9a01a_cache_buffer(tft_cache_buf_data0, TFT_CACHE_BUF0_SIZE),
+    make_gc9a01a_cache_buffer(tft_cache_buf_data1, TFT_CACHE_BUF1_SIZE)
+};
+//! Кэш TFT.
+static gc9a01a_cache_t tft_cache = make_gc9a01a_cache(&tft, TFT_PIXEL_SIZE, tft_cache_bufs, TFT_CACHE_BUFS_COUNT, GC9A01A_ROW_COL_REVERSE_MODE);
+//! Виртуальный буфер изображения..
+static graphics_vbuf_t graph_vbuf = make_gc9a01a_cache_vbuf();
+//! Изображение на экране.
+static graphics_t graphics = make_gc9a01a_cache_graphics(&tft_cache, &graph_vbuf, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
+static painter_t painter = make_painter(&graphics);
+
+static graphics_t img_graphics = make_graphics(anime_image_240, ANIME_IMAGE_240_WIDTH, ANIME_IMAGE_240_HEIGHT, GRAPHICS_FORMAT_RGB_565);
 
 
 static void spi_irq_handler(void)
@@ -50,7 +92,7 @@ static void init_spi(void)
 {
     spi_inst_t* spi = spi1;
 
-    spi_init(spi, 10*1000*1000);
+    spi_init(spi, 62500000);
     spi_set_format(spi, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     //hw_set_bits(&spi_get_hw(spi)->cr1, SPI_SSPCR1_LBM_BITS); // loopback.
 
@@ -126,12 +168,13 @@ static void setup_tft(void)
     gc9a01a_reset(&tft);
 
     gc9a01a_send_init(&tft);
-    sleep_ms(120);
 
-    //gc9a01a_cache_fill(&tft_cache, GC9A01A_MAKE_RGB565(0, 0, 0));
-    // painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
-    // painter_set_pen(&painter, PAINTER_PEN_SOLID);
-    // painter_fill(&painter);
+    // gc9a01a_cache_fill(&tft_cache, GC9A01A_MAKE_RGB565(0xff, 0, 0xff));
+    painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
+    painter_set_pen(&painter, PAINTER_PEN_SOLID);
+    painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0, 0xff));
+    painter_fill(&painter);
+    painter_flush(&painter);
 }
 
 static uint16_t pixel = GC9A01A_MAKE_RGB565(0x00, 0xff, 0xff);
@@ -145,15 +188,11 @@ int main(void)
     setup_tft();
 
     for(;;){
-        //gc9a01a_set_column_address(&tft, 0, 240);
-        //gc9a01a_set_page_address(&tft, 0, 240);
-        for(uint y = 0; y < 240; y ++){
-            for(uint x = 0; x < 240; x ++){
-                gc9a01a_set_pixel(&tft, x, y, &pixel, 2);
-                //gc9a01a_write(&tft, &pixel, 2);
-            }
-        }
+        //gc9a01a_set_column_address(&tft, 0, 239);
+        //gc9a01a_set_page_address(&tft, 0, 239);
+        //gc9a01a_write(&tft, anime_image_240, ANIME_IMAGE_240_HEIGHT * ANIME_IMAGE_240_WIDTH * 2);
         sleep_ms(1000);
+        painter_bitblt(&painter, 50, 50, &img_graphics, 50, 50, 150, 150);
     }
 
     return 0;

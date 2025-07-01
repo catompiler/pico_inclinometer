@@ -61,7 +61,10 @@
         "text_encoding": "c",
         "regex": "c",
         "valarray": "c",
-        "cstdlib": "c"
+        "cstdlib": "c",
+        "anime_image_240.h": "c",
+        "gc9a01a_cache.h": "c",
+        "gc9a01a_cache_vbuf.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

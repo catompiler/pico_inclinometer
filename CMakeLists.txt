@@ -60,10 +60,14 @@ pico_sdk_init()
 
 # executable
 add_executable(${PROJECT_NAME} main.c
+                               future/future.c
                                spi/spi.c
                                dma/dma_irq_mux.c
                                gc9a01a/gc9a01a.c
-                               future/future.c)
+                               gc9a01a/gc9a01a_cache.c
+                               graphics/graphics.c
+                               graphics/painter.c
+                               graphics/font.c)
 
 # compiler flags
 target_compile_options(${PROJECT_NAME} PRIVATE
@@ -71,7 +75,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 # defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE
-                                           PICO_RP2040=1)
+                                           USE_GRAPHICS_VIRTUAL_BUFFER
+                                           USE_GRAPHICS_FORMAT_RGB_565)
 
 # linker flags
 target_link_options(${PROJECT_NAME} PRIVATE
