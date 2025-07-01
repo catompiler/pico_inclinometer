@@ -77,7 +77,8 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 target_compile_definitions(${PROJECT_NAME} PRIVATE
                                            USE_GRAPHICS_VIRTUAL_BUFFER
                                            USE_GRAPHICS_FORMAT_RGB_565
-                                           USE_GRAPHICS_FORMAT_BW_1_V)
+                                           USE_GRAPHICS_FORMAT_BW_1_V
+                                           USE_GRAPHICS_FORMAT_BW_1_H)
 
 # linker flags
 target_link_options(${PROJECT_NAME} PRIVATE

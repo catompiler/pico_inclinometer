@@ -1,6 +1,7 @@
 #include "fonts/arialnarrow12.h"
 #include "fonts/arialnarrow18.h"
 #include "fonts/arialbold42.h"
+#include "fonts/font_droid_sans_33x37.h"
 
 
 // маленький шрифт
@@ -81,3 +82,13 @@ static const font_bitmap_t font_arialbold42_bitmaps[] = {
 };
 
 static font_t font_arialbold42 = make_font_defchar(font_arialbold42_bitmaps, ARIALBOLD42_BITMAPS_COUNT, ARIALBOLD42_CHAR_WIDTH, ARIALBOLD42_CHAR_HEIGHT, ARIALBOLD42_DEF_HSPACE, ARIALBOLD42_DEF_VSPACE, ARIALBOLD42_DEF_CHAR);
+
+// Font bitmaps: font_droid_sans_33x37
+static const font_bitmap_t font_droid_sans_33x37_bitmaps[] = {
+    make_font_bitmap_descrs(FONT_DROID_SANS_33X37_PART0_FIRST_CHAR, FONT_DROID_SANS_33X37_PART0_LAST_CHAR, font_droid_sans_33x37_part0_data, FONT_DROID_SANS_33X37_PART0_WIDTH, FONT_DROID_SANS_33X37_PART0_HEIGHT, FONT_DROID_SANS_33X37_PART0_GRAPHICS_FORMAT, font_droid_sans_33x37_part0_descrs),
+    make_font_bitmap_descrs(FONT_DROID_SANS_33X37_PART1_FIRST_CHAR, FONT_DROID_SANS_33X37_PART1_LAST_CHAR, font_droid_sans_33x37_part1_data, FONT_DROID_SANS_33X37_PART1_WIDTH, FONT_DROID_SANS_33X37_PART1_HEIGHT, FONT_DROID_SANS_33X37_PART1_GRAPHICS_FORMAT, font_droid_sans_33x37_part1_descrs),
+    make_font_bitmap_descrs(FONT_DROID_SANS_33X37_PART2_FIRST_CHAR, FONT_DROID_SANS_33X37_PART2_LAST_CHAR, font_droid_sans_33x37_part2_data, FONT_DROID_SANS_33X37_PART2_WIDTH, FONT_DROID_SANS_33X37_PART2_HEIGHT, FONT_DROID_SANS_33X37_PART2_GRAPHICS_FORMAT, font_droid_sans_33x37_part2_descrs),
+};
+
+// Font: font_droid_sans_33x37
+static font_t font_droid_sans_33x37 = make_font_defchar(font_droid_sans_33x37_bitmaps, FONT_DROID_SANS_33X37_BITMAPS_COUNT, FONT_DROID_SANS_33X37_MAX_CHAR_WIDTH, FONT_DROID_SANS_33X37_MAX_CHAR_HEIGHT, 0, FONT_DROID_SANS_33X37_DEF_VSPACE, FONT_DROID_SANS_33X37_DEF_CHAR);
