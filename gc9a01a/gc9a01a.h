@@ -294,6 +294,13 @@ EXTERN err_t gc9a01a_wait(gc9a01a_t* tft);
 EXTERN void gc9a01a_reset(gc9a01a_t* tft);
 
 /**
+ * Отправляет последовательность инициализации в экран.
+ * @param tft TFT.
+ * @return Код ошибки.
+ */
+EXTERN err_t gc9a01a_send_init(gc9a01a_t* tft);
+
+/**
  * Читает идентификатор TFT.
  * @param tft TFT.
  * @param id Адрес переменной для записи идентификатора.

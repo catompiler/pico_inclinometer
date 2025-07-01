@@ -11,10 +11,10 @@
 //#define GC9A01A_GET_MEM_DEBUG
 
 //! Продолжительность ресета.
-//#define GC9A01A_RESET_TIME_US  15
-#define GC9A01A_RESET_TIME_MS  150
-//#define GC9A01A_RESET_WAIT_TIME_MS  150
-#define GC9A01A_RESET_WAIT_TIME_MS  500
+#define GC9A01A_RESET_TIME_US  15
+//#define GC9A01A_RESET_TIME_MS  150
+#define GC9A01A_RESET_WAIT_TIME_MS  150
+//#define GC9A01A_RESET_WAIT_TIME_MS  500
 //#define GC9A01A_SLEEP_OUT_WAIT_TIME_MS  10
 
 
@@ -192,6 +192,35 @@
 #define GC9A01A_RD_ID3_DATA_SIZE                2
 
 
+static const uint8_t _INIT_SEQUENCE[] = {
+    0xfe, 0x00,  // Inter Register Enable1 (FEh)
+    0xef, 0x00,  // Inter Register Enable2 (EFh)
+    0xb6, 0x02, 0x00, 0x00,  // Display Function Control (B6h) [S1→S360 source, G1→G32 gate]
+    0x36, 0x01, 0x48,  // Memory Access Control(36h) [Invert Row order, invert vertical scan order]
+    0x3a, 0x01, 0x05,  // COLMOD: Pixel Format Set (3Ah) [16 bits / pixel]
+    0xc3, 0x01, 0x13,  // Power Control 2 (C3h) [VREG1A = 5.06, VREG1B = 0.68]
+    0xc4, 0x01, 0x13,  // Power Control 3 (C4h) [VREG2A = -3.7, VREG2B = 0.68]
+    0xc9, 0x01, 0x22,  // Power Control 4 (C9h)
+    0xf0, 0x06, 0x45, 0x09, 0x08, 0x08, 0x26, 0x2a,  // SET_GAMMA1 (F0h)
+    0xf1, 0x06, 0x43, 0x70, 0x72, 0x36, 0x37, 0x6f,  // SET_GAMMA2 (F1h)
+    0xf2, 0x06, 0x45, 0x09, 0x08, 0x08, 0x26, 0x2a,  // SET_GAMMA3 (F2h)
+    0xf3, 0x06, 0x43, 0x70, 0x72, 0x36, 0x37, 0x6f,  // SET_GAMMA4 (F3h)
+    0x66, 0x0a, 0x3c, 0x00, 0xcd, 0x67, 0x45, 0x45, 0x10, 0x00, 0x00, 0x00,
+    0x67, 0x0a, 0x00, 0x3c, 0x00, 0x00, 0x00, 0x01, 0x54, 0x10, 0x32, 0x98,
+    0x74, 0x07, 0x10, 0x85, 0x80, 0x00, 0x00, 0x4e, 0x00,
+    0x98, 0x02, 0x3e, 0x07,
+    0x35, 0x00,  // Tearing Effect Line ON (35h) [both V-blanking and H-blanking]
+    0x21, 0x00,  // Display Inversion ON (21h)
+    0x11, 0x80, 0x78,  // Sleep Out Mode (11h) and delay(120)
+    0x29, 0x80, 0x14,  // Display ON (29h) and delay(20)
+    0x2a, 0x04, 0x00, 0x00, 0x00, 0xef,  // Column Address Set (2Ah) [Start col = 0, end col = 239]
+    0x2b, 0x04, 0x00, 0x00, 0x00, 0xef   // Row Address Set (2Bh) [Start row = 0, end row = 239]
+};
+
+static const size_t _INIT_SEQUENCE_LENGTH = sizeof(_INIT_SEQUENCE);
+
+
+
 
 ALWAYS_INLINE static void gpio_set(uint port, uint pin)
 {
@@ -339,6 +368,135 @@ bool gc9a01a_spi_callback(gc9a01a_t* tft)
     return true;
 }
 
+/**
+ * Получает указатель на данные в буфере нужного размера.
+ * @param tft TFT.
+ * @param size Необходимый размер.
+ * @param index Значение предыдущего индекса.
+ * @return Указатель на данные в бефере.
+ */
+ALWAYS_INLINE static uint8_t* gc9a01a_get_buffer(gc9a01a_t* tft, size_t size, size_t* index)
+{
+#ifdef GC9A01A_GET_MEM_DEBUG
+    if(index == NULL) return NULL;
+#endif
+    
+    size_t i = *index;
+    
+#ifdef GC9A01A_GET_MEM_DEBUG
+    if(i + size > GC9A01A_BUFFER_SIZE) return NULL;
+#endif
+    
+    (*index) += size;
+    
+    return &tft->buffer[i];
+}
+
+/**
+ * Получает указатель на сообщение.
+ * @param tft TFT.
+ * @param index Значение предыдущего индекса.
+ * @return Указатель на данные в бефере.
+ */
+ALWAYS_INLINE static spi_message_t* gc9a01a_get_message(gc9a01a_t* tft, size_t* index)
+{
+#ifdef GC9A01A_GET_MEM_DEBUG
+    if(index == NULL) return NULL;
+#endif
+    
+    size_t i = *index;
+    
+#ifdef GC9A01A_GET_MEM_DEBUG
+    if(i >= GC9A01A_MESSAGES_COUNT) return NULL;
+#endif
+    
+    (*index) ++;
+    
+    return &tft->messages[i];
+}
+
+err_t gc9a01a_send(gc9a01a_t* tft, const uint8_t* cmd, const uint8_t* args, size_t args_size)
+{
+    //if(cmd == NULL) return E_NULL_POINTER;
+    if(args == NULL && args_size != 0) return E_NULL_POINTER;
+    if(args != NULL && args_size == 0) return E_INVALID_VALUE;
+
+    if(!gc9a01a_wait_current_op(tft)) return E_BUSY;
+    
+    err_t err = E_NO_ERROR;
+    
+    size_t message_index = 0;
+    
+    if(cmd != NULL){
+        spi_message_t* cmd_msg = gc9a01a_get_message(tft, &message_index);
+#ifdef GC9A01A_GET_MEM_DEBUG
+        if(cmd_msg == NULL) return E_OUT_OF_MEMORY;
+#endif
+        
+        err = spi_message_init(cmd_msg, SPI_WRITE, cmd, NULL, GC9A01A_CMD_SIZE);
+        if(err != E_NO_ERROR) return err;
+        spi_message_set_sender_data(cmd_msg, tft);
+        spi_message_set_callback(cmd_msg, gc9a01a_cmd_message_end);
+    }
+    
+    if(args != NULL){
+        spi_message_t* data_msg = gc9a01a_get_message(tft, &message_index);
+#ifdef GC9A01A_GET_MEM_DEBUG
+        if(data_msg == NULL) return E_OUT_OF_MEMORY;
+#endif
+        
+        err = spi_message_init(data_msg, SPI_WRITE, args, NULL, args_size);
+        if(err != E_NO_ERROR) return err;
+    }
+    
+    if(message_index == 0) return E_INVALID_OPERATION;
+
+    err = gc9a01a_transfer(tft, cmd == NULL, message_index);
+    if(err != E_NO_ERROR) return err;
+    
+    err = gc9a01a_wait(tft);
+    if(err != E_NO_ERROR) return err;
+
+    return E_NO_ERROR;
+}
+
+static err_t gc9a01a_send_sequence(gc9a01a_t* tft, const uint8_t* seq, size_t seq_len)
+{
+    size_t pos = 0;
+
+    const uint8_t* cmd;
+    uint8_t info;
+    uint8_t count;
+    uint8_t delay;
+    const uint8_t* args;
+
+    err_t err;
+
+    while(pos < seq_len){
+        cmd = &seq[pos ++]; // первый байт - команда.
+        info = seq[pos ++]; // второй байт - информация о команде.
+        // Число параметров команды - 
+        // нижние 7 бит информации о команде.
+        count = info & 0x7f;
+        // если верхний бит информации о команде
+        // установлен - то следующий байт является
+        // величиной задержки в мс.
+        delay = (info & 0x80) ? seq[pos ++] : 0;
+        // Если число параметров не 0 -
+        // то параметры начинаются с текущего байта.
+        args = (count == 0) ? NULL : &seq[pos];
+        // Пропустим параметры команды.
+        pos += count;
+
+        err = gc9a01a_send(tft, cmd, args, count);
+        if(err != E_NO_ERROR) return err;
+
+        if(delay != 0) sleep_ms(delay);
+    }
+
+    return E_NO_ERROR;
+}
+
 err_t gc9a01a_init(gc9a01a_t* tft, gc9a01a_init_t* tft_init)
 {
     // Clear.
@@ -397,58 +555,16 @@ void gc9a01a_reset(gc9a01a_t* tft)
     future_wait(&tft->future);
     
     gpio_reset(tft->rst_gpio, tft->rst_pin);
-    //sleep_us(GC9A01A_RESET_TIME_US);
-    sleep_ms(GC9A01A_RESET_TIME_MS);
+    sleep_us(GC9A01A_RESET_TIME_US);
+    //sleep_ms(GC9A01A_RESET_TIME_MS);
     gpio_set(tft->rst_gpio, tft->rst_pin);
     
     sleep_ms(GC9A01A_RESET_WAIT_TIME_MS);
 }
 
-/**
- * Получает указатель на данные в буфере нужного размера.
- * @param tft TFT.
- * @param size Необходимый размер.
- * @param index Значение предыдущего индекса.
- * @return Указатель на данные в бефере.
- */
-ALWAYS_INLINE static uint8_t* gc9a01a_get_buffer(gc9a01a_t* tft, size_t size, size_t* index)
+err_t gc9a01a_send_init(gc9a01a_t* tft)
 {
-#ifdef GC9A01A_GET_MEM_DEBUG
-    if(index == NULL) return NULL;
-#endif
-    
-    size_t i = *index;
-    
-#ifdef GC9A01A_GET_MEM_DEBUG
-    if(i + size > GC9A01A_BUFFER_SIZE) return NULL;
-#endif
-    
-    (*index) += size;
-    
-    return &tft->buffer[i];
-}
-
-/**
- * Получает указатель на сообщение.
- * @param tft TFT.
- * @param index Значение предыдущего индекса.
- * @return Указатель на данные в бефере.
- */
-ALWAYS_INLINE static spi_message_t* gc9a01a_get_message(gc9a01a_t* tft, size_t* index)
-{
-#ifdef GC9A01A_GET_MEM_DEBUG
-    if(index == NULL) return NULL;
-#endif
-    
-    size_t i = *index;
-    
-#ifdef GC9A01A_GET_MEM_DEBUG
-    if(i >= GC9A01A_MESSAGES_COUNT) return NULL;
-#endif
-    
-    (*index) ++;
-    
-    return &tft->messages[i];
+    return gc9a01a_send_sequence(tft, _INIT_SEQUENCE, _INIT_SEQUENCE_LENGTH);
 }
 
 err_t gc9a01a_read_id(gc9a01a_t* tft, gc9a01a_id_t* id)

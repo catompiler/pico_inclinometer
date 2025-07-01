@@ -40,7 +40,7 @@ project(pico_inclinometer C CXX ASM)
 
 # Flags for each build type
 # Debug
-set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -Og -ggdb")
+set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -O0 -ggdb")
 # Release
 set(CMAKE_C_FLAGS_RELEASE_INIT "-Wall -O2")
 
@@ -87,7 +87,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                                       pico_time
                                       hardware_spi
                                       hardware_dma
-                                      hardware_irq)
+                                      hardware_irq
+                                      hardware_gpio)
 
 # pico SW FP.
 pico_set_float_implementation(${PROJECT_NAME} pico)
