@@ -9,6 +9,8 @@
 #include "gc9a01a/gc9a01a_cache_vbuf.h"
 #include "graphics/graphics.h"
 #include "graphics/painter.h"
+#include "graphics/font.h"
+#include "fonts_decls.h"
 #include "anime_image_240.h"
 
 
@@ -57,6 +59,28 @@ static graphics_vbuf_t graph_vbuf = make_gc9a01a_cache_vbuf();
 //! Изображение на экране.
 static graphics_t graphics = make_gc9a01a_cache_graphics(&tft_cache, &graph_vbuf, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
 static painter_t painter = make_painter(&graphics);
+
+/*
+//! Битмапы шрифта 5x8.
+static const font_bitmap_t font_5x8_utf8_bitmaps[] = {
+    make_font_bitmap(32, 127, font_5x8_utf8_part0_data, FONT_5X8_UTF8_PART0_WIDTH, FONT_5X8_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
+    make_font_bitmap(0xb0, 0xb0, font_5x8_utf8_part1_data, FONT_5X8_UTF8_PART1_WIDTH, FONT_5X8_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
+    make_font_bitmap(0x400, 0x451, font_5x8_utf8_part2_data, FONT_5X8_UTF8_PART2_WIDTH, FONT_5X8_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
+};
+//! Шрифт 5x8.
+static font_t font5x8 = make_font_defchar(font_5x8_utf8_bitmaps, 3, 5, 8, 1, 1, 63);
+*/
+/*
+//! Битмапы шрифта 10x16.
+const font_bitmap_t font_10x16_utf8_bitmaps[] = {
+    make_font_bitmap(32, 127, font_10x16_utf8_part0_data, FONT_10X16_UTF8_PART0_WIDTH, FONT_10X16_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
+    make_font_bitmap(0xb0, 0xb0, font_10x16_utf8_part1_data, FONT_10X16_UTF8_PART1_WIDTH, FONT_10X16_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
+    make_font_bitmap(0x400, 0x451, font_10x16_utf8_part2_data, FONT_10X16_UTF8_PART2_WIDTH, FONT_10X16_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
+};
+//! Шрифт 10x16.
+static font_t font10x16 = make_font_defchar(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0, 63);
+*/
+#define MAKE_RGB(r, g, b) GC9A01A_MAKE_RGB565(r, g, b)
 
 static graphics_t img_graphics = make_graphics(anime_image_240, ANIME_IMAGE_240_WIDTH, ANIME_IMAGE_240_HEIGHT, GRAPHICS_FORMAT_RGB_565);
 
@@ -172,7 +196,11 @@ static void setup_tft(void)
     // gc9a01a_cache_fill(&tft_cache, GC9A01A_MAKE_RGB565(0xff, 0, 0xff));
     painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
     painter_set_pen(&painter, PAINTER_PEN_SOLID);
-    painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0, 0xff));
+    
+    painter_set_font(&painter, &font_arialnarrow18);
+    painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0, 0));
+    painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0x0, 0, 0x0));
+
     painter_fill(&painter);
     painter_flush(&painter);
 }
@@ -188,10 +216,15 @@ int main(void)
     setup_tft();
 
     for(;;){
+        painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0, 0, 0xff));
+        painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0x0, 0xff, 0x0));
+        painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
+        painter_draw_string(&painter, 100, 20, "Ня!");
         //gc9a01a_set_column_address(&tft, 0, 239);
         //gc9a01a_set_page_address(&tft, 0, 239);
         //gc9a01a_write(&tft, anime_image_240, ANIME_IMAGE_240_HEIGHT * ANIME_IMAGE_240_WIDTH * 2);
         sleep_ms(1000);
+        painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_NORMAL);
         painter_bitblt(&painter, 50, 50, &img_graphics, 50, 50, 150, 150);
     }
 

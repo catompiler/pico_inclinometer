@@ -64,7 +64,9 @@
         "cstdlib": "c",
         "anime_image_240.h": "c",
         "gc9a01a_cache.h": "c",
-        "gc9a01a_cache_vbuf.h": "c"
+        "gc9a01a_cache_vbuf.h": "c",
+        "font_5x8_utf8.h": "c",
+        "font_10x16_utf8.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }
