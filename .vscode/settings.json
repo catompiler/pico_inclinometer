@@ -66,7 +66,9 @@
         "gc9a01a_cache.h": "c",
         "gc9a01a_cache_vbuf.h": "c",
         "font_5x8_utf8.h": "c",
-        "font_10x16_utf8.h": "c"
+        "font_10x16_utf8.h": "c",
+        "cstdint": "c",
+        "qmi8658c.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

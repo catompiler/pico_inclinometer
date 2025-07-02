@@ -67,7 +67,8 @@ add_executable(${PROJECT_NAME} main.c
                                gc9a01a/gc9a01a_cache.c
                                graphics/graphics.c
                                graphics/painter.c
-                               graphics/font.c)
+                               graphics/font.c
+                               qmi8658c/qmi8658c.c)
 
 # compiler flags
 target_compile_options(${PROJECT_NAME} PRIVATE
@@ -92,6 +93,7 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
                                       cmsis_core
                                       pico_stdlib
                                       pico_time
+                                      hardware_i2c
                                       hardware_spi
                                       hardware_dma
                                       hardware_irq
