@@ -647,7 +647,7 @@ enum _Qmi8658c_Reset {
 
 /* FIFO Sample Count MSB (bits 1-0) */
 #define QMI8658C_FIFO_STATUS_SMPL_CNT_MSB_MASK (0x3)      /* Маска для старших битов счётчика */
-#define QMI8658C_FIFO_STATUS_SMPL_CNT_MSB(val) ((val) & 0x3) /* Извлечение MSB счётчика */
+#define QMI8658C_FIFO_STATUS_SMPL_CNT_MSB_VAL(val) ((val) & 0x3) /* Извлечение MSB счётчика */
 
 /* ==================================================== */
 /* Status Interrupt Register (STATUSINT) - Address 0x2D */
@@ -783,6 +783,9 @@ typedef enum {
     QMI8658C_CTRL9_CMD_ONDEMAND_CAL = 0xA2    // WCtrl9: Фоновая калибровка гироскопа
 } QMI8658C_Ctrl9_Cmnd;
 
+
+//! Значение подтверждения команды.
+#define QMI8658C_CTRL9_CMD_ACK 0x0
 
 
 //! Тип значения регистра.

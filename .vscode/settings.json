@@ -68,7 +68,9 @@
         "font_5x8_utf8.h": "c",
         "font_10x16_utf8.h": "c",
         "cstdint": "c",
-        "qmi8658c.h": "c"
+        "qmi8658c.h": "c",
+        "numbers": "c",
+        "errors.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

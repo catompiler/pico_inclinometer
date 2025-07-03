@@ -18,9 +18,11 @@ static err_t check_res(int res)
     case PICO_ERROR_NONE:
         break;
     case PICO_ERROR_TIMEOUT:
+        //asm("bkpt #0");
         return E_TIME_OUT;
     case PICO_ERROR_GENERIC:
     default:
+        //asm("bkpt #0");
         return E_IO_ERROR;
     }
 
@@ -55,7 +57,7 @@ err_t qmi8658c_read_reg(qmi8658c_t *imu, qmi8658c_reg_t reg_address, qmi8658c_re
 
     // Прочитаем данные.
     res = i2c_read_timeout_us(imu->i2c, imu->address, value, 1, false, I2C_TIMEOUT_US);
-    if(res != sizeof(buf)) return check_res(res);
+    if(res != 1) return check_res(res);
 
     return E_NO_ERROR;
 }
@@ -93,7 +95,7 @@ err_t qmi8658c_read_regs(qmi8658c_t *imu, qmi8658c_reg_t reg_address, qmi8658c_r
 
     // Прочитаем данные.
     res = i2c_read_timeout_us(imu->i2c, imu->address, values, count, false, I2C_TIMEOUT_US);
-    if(res != sizeof(buf)) return check_res(res);
+    if(res != count) return check_res(res);
 
     return E_NO_ERROR;
 }
@@ -115,7 +117,7 @@ err_t qmi8658c_write_regs(qmi8658c_t *imu, qmi8658c_reg_t reg_address, const qmi
 
     // Запишем данные.
     res = i2c_write_timeout_us(imu->i2c, imu->address, values, count, false, I2C_TIMEOUT_US);
-    if(res != sizeof(buf)) return check_res(res);
+    if(res != count) return check_res(res);
 
     return E_NO_ERROR;
 }
