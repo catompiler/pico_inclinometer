@@ -68,7 +68,8 @@ add_executable(${PROJECT_NAME} main.c
                                graphics/graphics.c
                                graphics/painter.c
                                graphics/font.c
-                               qmi8658c/qmi8658c.c)
+                               qmi8658c/qmi8658c.c
+                               imu/imu.c)
 
 # compiler flags
 target_compile_options(${PROJECT_NAME} PRIVATE
