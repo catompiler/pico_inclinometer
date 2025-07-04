@@ -13,7 +13,9 @@
 #include "fonts_decls.h"
 #include "anime_image_240.h"
 #include <string.h>
+#include <stdlib.h>
 #include <stdio.h>
+#include "pico/stdio.h"
 #include "errors/errors.h"
 #include "hardware/i2c.h"
 #include "qmi8658c/qmi8658c.h"
@@ -193,14 +195,14 @@ static err_t init_imu_sensor(void)
 
     // Настройка акселерометра.
     err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL2,
-                                QMI8658C_CTRL2_AFS_ACCEL_FULL_SCALE_8G |
+                                IMU_AFS |
                                 QMI8658C_CTRL2_AODR_125HZ
                             );
     if(err != E_NO_ERROR) return err;
 
     // Настройка гироскопа.
     err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL3,
-                                QMI8658C_CTRL3_GFS_GYRO_FULL_SCALE_256DPS |
+                                IMU_GFS |
                                 QMI8658C_CTRL3_GODR_117_5HZ
                             );
     if(err != E_NO_ERROR) return err;
@@ -345,6 +347,8 @@ static uint16_t pixel = GC9A01A_MAKE_RGB565(0x00, 0xff, 0xff);
 
 int main(void)
 {
+    stdio_init_all();
+
     init_dma_irq_mux();
 
     err_t err;
@@ -367,7 +371,7 @@ int main(void)
 
     imu_init(&imu, &imu_sensor, IMU_INT1, IMU_INT2);
 
-    const size_t str_buf_len = 64;
+    const size_t str_buf_len = 128;
     char str_buf[str_buf_len];
 
     for(;;){
@@ -376,15 +380,18 @@ int main(void)
         err = imu_process(&imu);
         if(err == E_NO_ERROR){
             memset(str_buf, 0x0, str_buf_len);
-            int n = snprintf(str_buf, str_buf_len-1,
-                             "%d\n%d\n%d",
-                             imu.raw_data.accel_x,
-                             imu.raw_data.accel_y,
-                             imu.raw_data.accel_z);
+            int n = printf(//str_buf, str_buf_len-1,
+                             "%f,%f,%f,%f,%f,%f\n",
+                             imu.data.accel_x,
+                             imu.data.accel_y,
+                             imu.data.accel_z,
+                             imu.data.gyro_x,
+                             imu.data.gyro_y,
+                             imu.data.gyro_z);
             if(n >= 0) str_buf[n] = '\0';
             painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0xff, 0xff));
             painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-            painter_draw_string(&painter, 100, 0, str_buf);
+            painter_draw_string(&painter, 75, 0, str_buf);
         }else if(err != E_AGAIN){
             memset(str_buf, 0x0, str_buf_len);
             int n = snprintf(str_buf, str_buf_len-1,

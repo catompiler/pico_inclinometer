@@ -69,46 +69,58 @@ add_executable(${PROJECT_NAME} main.c
                                graphics/painter.c
                                graphics/font.c
                                qmi8658c/qmi8658c.c
-                               imu/imu.c)
+                               imu/imu.c
+                               )
 
 # compiler flags
 target_compile_options(${PROJECT_NAME} PRIVATE
-                                       -mno-unaligned-access)
+                                       -mno-unaligned-access
+                                       -fsingle-precision-constant
+                                       )
 
 # defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE
                                            USE_GRAPHICS_VIRTUAL_BUFFER
                                            USE_GRAPHICS_FORMAT_RGB_565
                                            USE_GRAPHICS_FORMAT_BW_1_V
-                                           USE_GRAPHICS_FORMAT_BW_1_H)
+                                           USE_GRAPHICS_FORMAT_BW_1_H
+                                           )
 
 # linker flags
 target_link_options(${PROJECT_NAME} PRIVATE
                                     )
 
 # includes
-target_include_directories(${PROJECT_NAME} PRIVATE .)
+target_include_directories(${PROJECT_NAME} PRIVATE
+                                           .
+                                           )
 
 # libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
                                       cmsis_core
                                       pico_stdlib
                                       pico_time
+                                      pico_float
+                                      pico_printf
                                       hardware_i2c
                                       hardware_spi
                                       hardware_dma
                                       hardware_irq
-                                      hardware_gpio)
+                                      hardware_gpio
+                                      )
 
 # pico SW FP.
 pico_set_float_implementation(${PROJECT_NAME} pico)
-pico_set_double_implementation(${PROJECT_NAME} none)
-target_compile_definitions(${PROJECT_NAME} PUBLIC PICO_FLOAT_PROPAGATE_NANS=1)
-target_compile_definitions(${PROJECT_NAME} PUBLIC PICO_DOUBLE_PROPAGATE_NANS=1)
+pico_set_double_implementation(${PROJECT_NAME} pico) # при none не работает %f в printf
+target_compile_definitions(${PROJECT_NAME} PUBLIC PICO_FLOAT_PROPAGATE_NANS=0)
+target_compile_definitions(${PROJECT_NAME} PUBLIC PICO_DOUBLE_PROPAGATE_NANS=0)
 
 # stdio
 pico_enable_stdio_uart(${PROJECT_NAME} 0)
-pico_enable_stdio_usb(${PROJECT_NAME} 0)
+pico_enable_stdio_usb(${PROJECT_NAME} 1)
+
+# printf
+pico_set_printf_implementation(${PROJECT_NAME} pico)
 
 # run from ram
 #pico_set_binary_type(TARGET_NAME no_flash)

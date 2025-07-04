@@ -70,7 +70,9 @@
         "cstdint": "c",
         "qmi8658c.h": "c",
         "numbers": "c",
-        "errors.h": "c"
+        "errors.h": "c",
+        "i2c.h": "c",
+        "stdio.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

@@ -59,6 +59,26 @@ err_t imu_init(imu_t* imu, qmi8658c_t* sensor, uint pin_int1, uint pin_int2)
     imu->pin_int1 = pin_int1;
     imu->pin_int2 = pin_int2;
 
+    // Калибровки.
+    // Смещение.
+    // Акселерометр.
+    imu->offsets.accel_x = -0.001069362500f;
+    imu->offsets.accel_y = 0.138892290f;
+    imu->offsets.accel_z = 0.01857663500f;
+    // Гироскоп.
+    imu->offsets.gyro_x = -0.212103741f;
+    imu->offsets.gyro_y = -3.272893438f;
+    imu->offsets.gyro_z = 0.933690915f;
+    // Усиление.
+    // Акселерометр.
+    imu->gains.accel_x = 0.984112665f;
+    imu->gains.accel_y = 0.979883549f;
+    imu->gains.accel_z = 0.990387262f;
+    // Гироскоп.
+    imu->gains.gyro_x = 1.0f;
+    imu->gains.gyro_y = 1.0f;
+    imu->gains.gyro_z = 1.0f;
+
     return E_NO_ERROR;
 }
 
@@ -173,6 +193,42 @@ static err_t imu_fifo_read_raw(imu_t* imu)
     return E_NO_ERROR;
 }
 
+
+__attribute__((noinline))
+static void imu_calc_scaled(imu_t* imu)
+{
+    // Приведём к шкалам.
+    // Акселерометр.
+    imu->scaled_data.accel_x = (float)imu->raw_data.accel_x * (1.0f / IMU_ACCEL_1G);
+    imu->scaled_data.accel_y = (float)imu->raw_data.accel_y * (1.0f / IMU_ACCEL_1G);
+    imu->scaled_data.accel_z = (float)imu->raw_data.accel_z * (1.0f / IMU_ACCEL_1G);
+    // Гироскоп.
+    imu->scaled_data.gyro_x = (float)imu->raw_data.gyro_x * (1.0f / IMU_GYRO_1DPS);
+    imu->scaled_data.gyro_y = (float)imu->raw_data.gyro_y * (1.0f / IMU_GYRO_1DPS);
+    imu->scaled_data.gyro_z = (float)imu->raw_data.gyro_z * (1.0f / IMU_GYRO_1DPS);
+}
+
+__attribute__((noinline))
+static void imu_calc_apply_offsets_gains(imu_t* imu)
+{
+    // Смещения.
+    // Акселерометр.
+    imu->data.accel_x = (imu->scaled_data.accel_x - imu->offsets.accel_x) * imu->gains.accel_x;
+    imu->data.accel_y = (imu->scaled_data.accel_y - imu->offsets.accel_y) * imu->gains.accel_y;
+    imu->data.accel_z = (imu->scaled_data.accel_z - imu->offsets.accel_z) * imu->gains.accel_z;
+    // Гироскоп.
+    imu->data.gyro_x = (imu->scaled_data.gyro_x - imu->offsets.gyro_x) * imu->gains.gyro_x;
+    imu->data.gyro_y = (imu->scaled_data.gyro_y - imu->offsets.gyro_y) * imu->gains.gyro_y;
+    imu->data.gyro_z = (imu->scaled_data.gyro_z - imu->offsets.gyro_z) * imu->gains.gyro_z;
+}
+
+static void imu_calc(imu_t* imu)
+{
+    imu_calc_scaled(imu);
+    imu_calc_apply_offsets_gains(imu);
+}
+
+
 err_t imu_process(imu_t* imu)
 {
     err_t err;
@@ -186,7 +242,8 @@ err_t imu_process(imu_t* imu)
         err = imu_fifo_read_raw(imu);
         if(err != E_NO_ERROR) return err;
 
-        //TODO: process readed raw data.
+        // process readed raw data.
+        imu_calc(imu);
     }
 
     err = imu_fifo_read_end(imu);
