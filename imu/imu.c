@@ -1,5 +1,6 @@
 #include "imu.h"
 #include <string.h>
+#include <math.h>
 
 
 
@@ -53,11 +54,25 @@ err_t imu_init(imu_t* imu, qmi8658c_t* sensor, uint pin_int1, uint pin_int2)
 {
     if(sensor == NULL) return E_NULL_POINTER;
 
+    err_t err;
+
     memset(imu, 0x0, sizeof(imu_t));
 
     imu->sensor = sensor;
     imu->pin_int1 = pin_int1;
     imu->pin_int2 = pin_int2;
+
+    // Фильтры Калмана.
+    float X0[2] = IMU_KF_X0;
+    float P0[4] = IMU_KF_P0;
+    float Q[4]  = IMU_KF_Q;
+    float R     = IMU_KF_R;
+
+    err = kfag_init(&imu->kf_roll, X0, P0, Q, R);
+    if(err != E_NO_ERROR) return err;
+
+    err = kfag_init(&imu->kf_pitch, X0, P0, Q, R);
+    if(err != E_NO_ERROR) return err;
 
     // Калибровки.
     // Смещение.
@@ -194,7 +209,6 @@ static err_t imu_fifo_read_raw(imu_t* imu)
 }
 
 
-__attribute__((noinline))
 static void imu_calc_scaled(imu_t* imu)
 {
     // Приведём к шкалам.
@@ -208,7 +222,6 @@ static void imu_calc_scaled(imu_t* imu)
     imu->scaled_data.gyro_z = (float)imu->raw_data.gyro_z * (1.0f / IMU_GYRO_1DPS);
 }
 
-__attribute__((noinline))
 static void imu_calc_apply_offsets_gains(imu_t* imu)
 {
     // Смещения.
@@ -222,10 +235,34 @@ static void imu_calc_apply_offsets_gains(imu_t* imu)
     imu->data.gyro_z = (imu->scaled_data.gyro_z - imu->offsets.gyro_z) * imu->gains.gyro_z;
 }
 
+static void imu_calc_angles(imu_t* imu)
+{
+    float acc_x = imu->data.accel_x;
+    float acc_y = imu->data.accel_y;
+    float acc_z = imu->data.accel_z;
+
+    imu->accel_roll = atan2f(-acc_x, acc_y);
+    imu->accel_pitch = atan2f(-acc_x, -acc_z);
+
+    float gyro_y = imu->data.gyro_y;
+    float gyro_z = imu->data.gyro_z;
+
+    imu->gyro_droll = -gyro_z;
+    imu->gyro_dpitch = -gyro_y;
+}
+
+static void imu_filter_angles(imu_t* imu)
+{
+    imu->roll = kfag_calc(&imu->kf_roll, imu->gyro_droll, IMU_GYRO_DT, imu->accel_roll);
+    imu->pitch = kfag_calc(&imu->kf_pitch, imu->gyro_dpitch, IMU_GYRO_DT, imu->accel_pitch);
+}
+
 static void imu_calc(imu_t* imu)
 {
     imu_calc_scaled(imu);
     imu_calc_apply_offsets_gains(imu);
+    imu_calc_angles(imu);
+    imu_filter_angles(imu);
 }
 
 

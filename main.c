@@ -203,7 +203,7 @@ static err_t init_imu_sensor(void)
     // Настройка гироскопа.
     err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL3,
                                 IMU_GFS |
-                                QMI8658C_CTRL3_GODR_117_5HZ
+                                IMU_GODR
                             );
     if(err != E_NO_ERROR) return err;
 
@@ -380,18 +380,22 @@ int main(void)
         err = imu_process(&imu);
         if(err == E_NO_ERROR){
             memset(str_buf, 0x0, str_buf_len);
-            int n = printf(//str_buf, str_buf_len-1,
+            /*int n = printf(//str_buf, str_buf_len-1,
                              "%f,%f,%f,%f,%f,%f\n",
                              imu.data.accel_x,
                              imu.data.accel_y,
                              imu.data.accel_z,
                              imu.data.gyro_x,
                              imu.data.gyro_y,
-                             imu.data.gyro_z);
+                             imu.data.gyro_z);*/
+            float roll  = imu.roll  / 3.14159265359f * 180.0f;
+            float pitch = imu.pitch / 3.14159265359f * 180.0f;
+            printf("roll: %.2f° pitch: %.2f°\n", roll, pitch);
+            int n = snprintf(str_buf, str_buf_len-1, "roll: %.2f°\npitch: %.2f°", roll, pitch);
             if(n >= 0) str_buf[n] = '\0';
             painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0xff, 0xff));
             painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-            painter_draw_string(&painter, 75, 0, str_buf);
+            painter_draw_string(&painter, 10, 80, str_buf);
         }else if(err != E_AGAIN){
             memset(str_buf, 0x0, str_buf_len);
             int n = snprintf(str_buf, str_buf_len-1,

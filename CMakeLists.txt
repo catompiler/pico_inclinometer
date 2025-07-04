@@ -70,12 +70,15 @@ add_executable(${PROJECT_NAME} main.c
                                graphics/font.c
                                qmi8658c/qmi8658c.c
                                imu/imu.c
+                               kfag/kfag.c
                                )
 
 # compiler flags
 target_compile_options(${PROJECT_NAME} PRIVATE
                                        -mno-unaligned-access
                                        -fsingle-precision-constant
+                                       -ffunction-sections
+                                       -fdata-sections
                                        )
 
 # defines
@@ -88,6 +91,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
 
 # linker flags
 target_link_options(${PROJECT_NAME} PRIVATE
+                                    -Wl,--gc-sections
                                     )
 
 # includes
