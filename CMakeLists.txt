@@ -71,6 +71,7 @@ add_executable(${PROJECT_NAME} main.c
                                qmi8658c/qmi8658c.c
                                imu/imu.c
                                kfag/kfag.c
+                               imu_main.c
                                )
 
 # compiler flags
@@ -102,6 +103,7 @@ target_include_directories(${PROJECT_NAME} PRIVATE
 # libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
                                       cmsis_core
+                                      pico_multicore
                                       pico_stdlib
                                       pico_time
                                       pico_float

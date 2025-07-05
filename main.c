@@ -1,4 +1,5 @@
 #include "pico/stdlib.h"
+#include "pico/multicore.h"
 #include "hardware/gpio.h"
 #include "hardware/spi.h"
 #include "hardware/irq.h"
@@ -17,9 +18,7 @@
 #include <stdio.h>
 #include "pico/stdio.h"
 #include "errors/errors.h"
-#include "hardware/i2c.h"
-#include "qmi8658c/qmi8658c.h"
-#include "imu/imu.h"
+#include "imu_main.h"
 
 
 // // It's a Trap!
@@ -32,17 +31,6 @@
 
 // #define DBG_ERR(E) dbg_err_int(E)
 
-
-#define IMU_SDA 6
-#define IMU_SCL 7
-#define IMU_INT1 23
-#define IMU_INT2 24
-
-#define i2c_imu i2c1
-static qmi8658c_t imu_sensor;
-
-// IMU.
-imu_t imu;
 
 
 #define TFT_MOSI 11
@@ -140,113 +128,6 @@ static void init_dma_irq_mux(void)
     irq_set_exclusive_handler(DMA_IRQ_1, dma_irq_mux_irq_1_handler);
     irq_set_priority(DMA_IRQ_1, 0);
     irq_set_enabled(DMA_IRQ_1, true);
-}
-
-static void init_i2c(void)
-{
-    i2c_inst_t* i2c = i2c_imu;
-
-    i2c_init(i2c, 100000);
-    gpio_set_function(IMU_SDA, GPIO_FUNC_I2C);
-    gpio_pull_up(IMU_SDA);
-    gpio_set_function(IMU_SCL, GPIO_FUNC_I2C);
-    gpio_pull_up(IMU_SCL);
-}
-
-static err_t init_imu_sensor(void)
-{
-    qmi8658c_reg_value_t value;
-    err_t err;
-
-    qmi8658c_t* imu = &imu_sensor;
-
-    // gpio.
-    // int1.
-    gpio_init(IMU_INT1);
-    gpio_set_pulls(IMU_INT1, false, false);
-    // int2.
-    gpio_init(IMU_INT2);
-    gpio_set_pulls(IMU_INT2, false, false);
-
-    // imu.
-    // init.
-    err = qmi8658c_init(imu, i2c_imu, QMI8658C_I2C_ADDRESS_SECOND);
-    if(err != E_NO_ERROR) return err;
-
-    err = qmi8658c_soft_reset(imu);
-    if(err != E_NO_ERROR) return err;
-
-    sleep_ms(QMI8658C_RESET_TIME_MIN_MS + 1);
-
-    err = qmi8658c_read_reg(imu, QMI8658C_REG_WHO_AM_I, &value);
-    if(err != E_NO_ERROR) return err;
-
-    if(value != QMI8658C_WHO_AM_I) return E_INVALID_OPERATION;
-
-    // Автоинкремент адреса.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL1, QMI8658C_CTRL1_ADDR_AI_DISABLED);
-    if(err != E_NO_ERROR) return err;
-
-    // Остановить всё.
-    err = qmi8658c_write_reg(imu, QMI8658C_CTRL7_NONE, 0);
-    if(err != E_NO_ERROR) return err;
-
-    sleep_ms(1);
-
-    // Настройка акселерометра.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL2,
-                                IMU_AFS |
-                                QMI8658C_CTRL2_AODR_125HZ
-                            );
-    if(err != E_NO_ERROR) return err;
-
-    // Настройка гироскопа.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL3,
-                                IMU_GFS |
-                                IMU_GODR
-                            );
-    if(err != E_NO_ERROR) return err;
-
-    // Настройка ФНЧ.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL5,
-                                QMI8658C_CTRL5_GLPF_ENABLED |
-                                QMI8658C_CTRL5_GLPF_MODE_2_66_PERCENT_ODR |
-                                QMI8658C_CTRL5_ALPF_ENABLED |
-                                QMI8658C_CTRL5_ALPF_MODE_2_66_PERCENT_ODR
-                            );
-    if(err != E_NO_ERROR) return err;
-
-    // Отключение детектора движений.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL6, QMI8658C_CTRL6_SMOD_DISABLED);
-    if(err != E_NO_ERROR) return err;
-
-    // Включение.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL7,
-                                QMI8658C_CTRL7_SYNC_SMPL_DISABLED |
-                                QMI8658C_CTRL7_SYS_HS_NORMAL |
-                                QMI8658C_CTRL7_GSN_FULL_MODE |
-                                QMI8658C_CTRL7_SEN_DISABLED |
-                                QMI8658C_CTRL7_GEN_ENABLED |
-                                QMI8658C_CTRL7_AEN_ENABLED
-                            );
-    if(err != E_NO_ERROR) return err;
-
-    // CTRL8.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_CTRL8, QMI8658C_CTRL8_CTRL9_HS_INT1);
-    if(err != E_NO_ERROR) return err;
-
-    // Настройка FIFO.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_FIFO_CTRL,
-                                QMI8658C_FIFO_CTRL_MODE_STREAM |
-                                QMI8658C_FIFO_CTRL_SIZE_64SAMPLES
-                            );
-    if(err != E_NO_ERROR) return err;
-
-    // Уровень заполнения FIFO для индикации.
-    err = qmi8658c_write_reg(imu, QMI8658C_REG_FIFO_WTM_TH, IMU_FIFO_WATERMARK);
-    if(err != E_NO_ERROR) return err;
-
-    return E_NO_ERROR;
 }
 
 
@@ -351,25 +232,12 @@ int main(void)
 
     init_dma_irq_mux();
 
-    err_t err;
+    multicore_reset_core1();
+    multicore_launch_core1(imu_main);
 
     init_spi();
     init_tft();
     setup_tft();
-
-    init_i2c();
-    err = init_imu_sensor();
-
-    if(err != E_NO_ERROR){
-        painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-        painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0, 0));
-        painter_draw_string(&painter, 100, 0, "IMU ERR!");
-        for(;;){
-            sleep_ms(1000);
-        }
-    }
-
-    imu_init(&imu, &imu_sensor, IMU_INT1, IMU_INT2);
 
     const size_t str_buf_len = 128;
     char str_buf[str_buf_len];
@@ -377,34 +245,28 @@ int main(void)
     for(;;){
         painter_fill(&painter);
 
-        err = imu_process(&imu);
-        if(err == E_NO_ERROR){
+        const imu_process_state_t* imu_state = imu_process_get_state();
+
+        if(imu_state->status & IMU_PROCESS_STATUS_VALID){
             memset(str_buf, 0x0, str_buf_len);
-            /*int n = printf(//str_buf, str_buf_len-1,
-                             "%f,%f,%f,%f,%f,%f\n",
-                             imu.data.accel_x,
-                             imu.data.accel_y,
-                             imu.data.accel_z,
-                             imu.data.gyro_x,
-                             imu.data.gyro_y,
-                             imu.data.gyro_z);*/
-            float roll  = imu.roll  / 3.14159265359f * 180.0f;
-            float pitch = imu.pitch / 3.14159265359f * 180.0f;
+            float roll  = imu_state->roll  / 3.14159265359f * 180.0f;
+            float pitch = imu_state->pitch / 3.14159265359f * 180.0f;
             printf("roll: %.2f° pitch: %.2f°\n", roll, pitch);
             int n = snprintf(str_buf, str_buf_len-1, "roll: %.2f°\npitch: %.2f°", roll, pitch);
             if(n >= 0) str_buf[n] = '\0';
             painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0xff, 0xff));
             painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
             painter_draw_string(&painter, 10, 80, str_buf);
-        }else if(err != E_AGAIN){
+        }else if(imu_state->status & (IMU_PROCESS_STATUS_IMU_ERROR|IMU_PROCESS_STATUS_INIT_IMU_ERROR|IMU_PROCESS_STATUS_INIT_SENSOR_ERROR)){
             memset(str_buf, 0x0, str_buf_len);
             int n = snprintf(str_buf, str_buf_len-1,
-                             "imu\nrd\nerr:\n%d\n",
-                             (int)err);
+                             "imu err: %d\ninit err: %d",
+                             (int)imu_state->imu_error,
+                             (int)imu_state->init_error);
             if(n >= 0) str_buf[n] = '\0';
             painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0xff, 0));
                 painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-                painter_draw_string(&painter, 100, 0, str_buf);
+                painter_draw_string(&painter, 10, 80, str_buf);
         }
 
         /*painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0, 0, 0xff));
