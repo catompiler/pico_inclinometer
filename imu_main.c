@@ -147,7 +147,7 @@ void imu_main(void)
     if(err != E_NO_ERROR){
         for(;;){
             process_state.status = IMU_PROCESS_STATUS_INIT_SENSOR_ERROR;
-            asm("bkpt #0");
+            //asm("bkpt #0");
             sleep_ms(100);
         }
     }
@@ -158,7 +158,7 @@ void imu_main(void)
     if(err != E_NO_ERROR){
         for(;;){
             process_state.status = IMU_PROCESS_STATUS_INIT_IMU_ERROR;
-            asm("bkpt #0");
+            //asm("bkpt #0");
             sleep_ms(100);
         }
     }
@@ -178,7 +178,7 @@ void imu_main(void)
         }else if(err != E_AGAIN){
             process_state.status &= ~IMU_PROCESS_STATUS_VALID;
             process_state.status |= IMU_PROCESS_STATUS_IMU_ERROR;
-            asm("bkpt #0");
+            //asm("bkpt #0");
             sleep_ms(1);
         }
     }

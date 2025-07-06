@@ -15,6 +15,14 @@
 #include "font.h"
 #include "rect.h"
 #include "point.h"
+#include "port.h"
+
+
+//! Атрибуты для критичных по времени исполнения функций.
+#ifndef PAINTER_TIME_CRITICAL
+#define PAINTER_TIME_CRITICAL RAM_FUNC
+#endif
+
 
 //! Режимы рисования.
 typedef enum _Painter_Mode {

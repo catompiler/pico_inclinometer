@@ -74,6 +74,8 @@ add_executable(${PROJECT_NAME} main.c
                                imu_main.c
                                view/angles.c
                                view/incl.c
+                               view/alt_ind.c
+                               iqmath/iq15_math.c
                                )
 
 # compiler flags

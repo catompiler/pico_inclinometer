@@ -84,7 +84,7 @@ void painter_draw_point(painter_t* painter, graphics_pos_t x, graphics_pos_t y)
     painter_put_pixel(painter, x, y, painter->pen_color);
 }
 
-void painter_put_line_pixel(painter_t* painter, graphics_pos_t x, graphics_pos_t y, size_t pixel_number)
+PAINTER_TIME_CRITICAL void painter_put_line_pixel(painter_t* painter, graphics_pos_t x, graphics_pos_t y, size_t pixel_number)
 {
     switch(painter->pen){
         default:
@@ -154,7 +154,7 @@ void painter_put_line_pixel(painter_t* painter, graphics_pos_t x, graphics_pos_t
     }
 }
 
-void painter_draw_vline(painter_t* painter, graphics_pos_t x, graphics_pos_t y0, graphics_pos_t y1)
+PAINTER_TIME_CRITICAL void painter_draw_vline(painter_t* painter, graphics_pos_t x, graphics_pos_t y0, graphics_pos_t y1)
 {
     if(x < 0 || x >= (graphics_pos_t)graphics_width(painter->graphics)) return;
     
@@ -171,7 +171,7 @@ void painter_draw_vline(painter_t* painter, graphics_pos_t x, graphics_pos_t y0,
     }
 }
 
-void painter_draw_hline(painter_t* painter, graphics_pos_t y, graphics_pos_t x0, graphics_pos_t x1)
+PAINTER_TIME_CRITICAL void painter_draw_hline(painter_t* painter, graphics_pos_t y, graphics_pos_t x0, graphics_pos_t x1)
 {
     if(y < 0 || y >= (graphics_pos_t)graphics_height(painter->graphics)) return;
     
@@ -188,7 +188,7 @@ void painter_draw_hline(painter_t* painter, graphics_pos_t y, graphics_pos_t x0,
     }
 }
 
-void painter_draw_line(painter_t* painter, graphics_pos_t x0, graphics_pos_t y0, graphics_pos_t x1, graphics_pos_t y1)
+PAINTER_TIME_CRITICAL void painter_draw_line(painter_t* painter, graphics_pos_t x0, graphics_pos_t y0, graphics_pos_t x1, graphics_pos_t y1)
 {
     if(x0 == x1){
         painter_draw_vline(painter, x0, y0, y1);
@@ -232,7 +232,7 @@ void painter_draw_line(painter_t* painter, graphics_pos_t x0, graphics_pos_t y0,
     painter_put_line_pixel(painter, x1, y1, pixel_number);
 }
 
-void painter_fill_back_put_pixel(painter_t* painter, graphics_pos_t x_first, graphics_pos_t y_first, graphics_pos_t x, graphics_pos_t y)
+PAINTER_TIME_CRITICAL void painter_fill_back_put_pixel(painter_t* painter, graphics_pos_t x_first, graphics_pos_t y_first, graphics_pos_t x, graphics_pos_t y)
 {
     graphics_pos_t dx = x - x_first;
     graphics_pos_t dy = y - y_first;
@@ -352,7 +352,7 @@ void painter_fill_back_put_pixel(painter_t* painter, graphics_pos_t x_first, gra
     }
 }
 
-static void painter_fill_back(painter_t* painter, graphics_pos_t x_first, graphics_pos_t y_first, graphics_pos_t y_cur, graphics_pos_t x_from, graphics_pos_t x_to)
+PAINTER_TIME_CRITICAL static void painter_fill_back(painter_t* painter, graphics_pos_t x_first, graphics_pos_t y_first, graphics_pos_t y_cur, graphics_pos_t x_from, graphics_pos_t x_to)
 {
     if(painter->brush == PAINTER_BRUSH_NONE) return;
 
@@ -391,7 +391,7 @@ static bool painter_fast_fillrect_impl(painter_t* painter, graphics_pos_t left, 
 }
 #endif
 
-void painter_draw_rect(painter_t* painter, graphics_pos_t left, graphics_pos_t top, graphics_pos_t right, graphics_pos_t bottom)
+PAINTER_TIME_CRITICAL void painter_draw_rect(painter_t* painter, graphics_pos_t left, graphics_pos_t top, graphics_pos_t right, graphics_pos_t bottom)
 {
     if(left == right){
         painter_draw_vline(painter, left, top, bottom);
@@ -450,7 +450,7 @@ void painter_draw_rect(painter_t* painter, graphics_pos_t left, graphics_pos_t t
     }
 }
 
-void painter_draw_fillrect(painter_t* painter, graphics_pos_t left, graphics_pos_t top, graphics_pos_t right, graphics_pos_t bottom)
+PAINTER_TIME_CRITICAL void painter_draw_fillrect(painter_t* painter, graphics_pos_t left, graphics_pos_t top, graphics_pos_t right, graphics_pos_t bottom)
 {
     if(painter->brush == PAINTER_BRUSH_NONE) return;
     
@@ -481,7 +481,7 @@ void painter_draw_fillrect(painter_t* painter, graphics_pos_t left, graphics_pos
     }
 }
 
-void painter_draw_circle(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y, graphics_pos_t radius)
+PAINTER_TIME_CRITICAL void painter_draw_circle(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y, graphics_pos_t radius)
 {
     if(center_x + radius < 0 || center_x - radius >= 
         (graphics_pos_t)graphics_width(painter->graphics)) return;
@@ -556,7 +556,7 @@ void painter_draw_circle(painter_t* painter, graphics_pos_t center_x, graphics_p
     }
 }
 
-void painter_draw_ellipse(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y, graphics_pos_t a, graphics_pos_t b)
+PAINTER_TIME_CRITICAL void painter_draw_ellipse(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y, graphics_pos_t a, graphics_pos_t b)
 {
     if(center_x + a < 0 || center_x - a >= 
         (graphics_pos_t)graphics_width(painter->graphics)) return;
@@ -635,7 +635,7 @@ void painter_draw_ellipse(painter_t* painter, graphics_pos_t center_x, graphics_
     }
 }
 
-void painter_draw_triangle(painter_t* painter, graphics_pos_t x0, graphics_pos_t y0,
+PAINTER_TIME_CRITICAL void painter_draw_triangle(painter_t* painter, graphics_pos_t x0, graphics_pos_t y0,
                                                graphics_pos_t x1, graphics_pos_t y1,
                                                graphics_pos_t x2, graphics_pos_t y2)
 {
@@ -849,7 +849,7 @@ void painter_draw_triangle(painter_t* painter, graphics_pos_t x0, graphics_pos_t
     //printf("done.\n");
 }
 
-void painter_bitblt(painter_t* painter, graphics_pos_t dst_x, graphics_pos_t dst_y,
+PAINTER_TIME_CRITICAL void painter_bitblt(painter_t* painter, graphics_pos_t dst_x, graphics_pos_t dst_y,
                     const graphics_t* src_graphics, graphics_pos_t src_x, graphics_pos_t src_y,
                     graphics_size_t src_width, graphics_size_t src_height)
 {
@@ -942,24 +942,27 @@ graphics_pos_t painter_rotate_x(graphics_pos_t x, painter_iq_t angle)
 
 graphics_pos_t painter_rotate_y(graphics_pos_t y, painter_iq_t angle)
 {
-    painter_iq_t res = iq15_sin(angle) * y;
+    painter_iq_t res = iq15_sin_pu(angle) * y;
     res = iq15_round(res);
     return iq15_int(res);
 }
 
 void painter_rotate(graphics_pos_t* x, graphics_pos_t* y, painter_iq_t angle)
 {
-    graphics_pos_t vx = 0;
-    graphics_pos_t vy = 0;
+    graphics_pos_t x_val = *x;
+    graphics_pos_t y_val = *y;
+
+    iq15_t sin_val = iq15_sin_pu(angle);
+    iq15_t cos_val = iq15_cos_pu(angle);
+
+    iq15_t res_x_iq = x_val * cos_val - y_val * sin_val;
+    iq15_t res_y_iq = x_val * sin_val + y_val * cos_val;
     
-    if(x) vx = *x;
-    if(y) vy = *y;
-    
-    if(x) *x = painter_rotate_x(vx, angle) + painter_rotate_y(vy, angle);
-    if(y) *y = painter_rotate_y(vx, angle) + painter_rotate_x(vy, angle);
+    *x = iq15_int(iq15_round(res_x_iq));
+    *y = iq15_int(iq15_round(res_y_iq));
 }
 
-void painter_draw_arc(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y,
+PAINTER_TIME_CRITICAL void painter_draw_arc(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y,
                       graphics_pos_t radius, painter_iq_t from_angle, painter_iq_t to_angle)
 {
     if(center_x + radius < 0 || center_x - radius >= 
@@ -1049,7 +1052,7 @@ void painter_draw_arc(painter_t* painter, graphics_pos_t center_x, graphics_pos_
     }
 }
 
-void painter_draw_ellipse_arc(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y,
+PAINTER_TIME_CRITICAL void painter_draw_ellipse_arc(painter_t* painter, graphics_pos_t center_x, graphics_pos_t center_y,
                              graphics_pos_t a, graphics_pos_t b, painter_iq_t from_angle, painter_iq_t to_angle)
 {
     if(center_x + a < 0 || center_x - a >= 
@@ -1141,7 +1144,7 @@ void painter_draw_ellipse_arc(painter_t* painter, graphics_pos_t center_x, graph
     }
 }
 
-static graphics_pos_t painter_fill_all_impl(painter_t* painter, graphics_pos_t x, graphics_pos_t y)
+PAINTER_TIME_CRITICAL static graphics_pos_t painter_fill_all_impl(painter_t* painter, graphics_pos_t x, graphics_pos_t y)
 {
     //painter_fill_back_put_pixel
     //painter_put_pixel(painter, x, y, painter->fill_color)
@@ -1209,7 +1212,7 @@ static graphics_pos_t painter_fill_all_impl(painter_t* painter, graphics_pos_t x
     return x_right;
 }
 
-static graphics_pos_t painter_fill_target_impl(painter_t* painter, graphics_pos_t x, graphics_pos_t y)
+PAINTER_TIME_CRITICAL static graphics_pos_t painter_fill_target_impl(painter_t* painter, graphics_pos_t x, graphics_pos_t y)
 {
     //painter_fill_back_put_pixel
     //painter_put_pixel(painter, x, y, painter->fill_color)
@@ -1291,7 +1294,7 @@ void painter_flood_fill(painter_t* painter, graphics_pos_t x, graphics_pos_t y)
     }
 }
 
-static bool painter_draw_char_impl(painter_t* painter, graphics_pos_t x, graphics_pos_t y, font_char_t c, rect_t* char_rect, point_t* char_offset)
+PAINTER_TIME_CRITICAL static bool painter_draw_char_impl(painter_t* painter, graphics_pos_t x, graphics_pos_t y, font_char_t c, rect_t* char_rect, point_t* char_offset)
 {
     if(painter->font == NULL) return false;
     
@@ -1324,7 +1327,7 @@ size_t painter_draw_char(painter_t* painter, graphics_pos_t x, graphics_pos_t y,
     return painter_draw_char_impl(painter, x, y, c, NULL, NULL) ? 1 : 0;
 }
 
-size_t painter_draw_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s)
+PAINTER_TIME_CRITICAL size_t painter_draw_string(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s)
 {
     if(painter->font == NULL || s == NULL) return 0;
     
@@ -1382,7 +1385,7 @@ size_t painter_draw_string(painter_t* painter, graphics_pos_t x, graphics_pos_t 
     return count;
 }
 
-void painter_string_size(painter_t* painter, const char* s, graphics_size_t* width, graphics_size_t* height)
+PAINTER_TIME_CRITICAL void painter_string_size(painter_t* painter, const char* s, graphics_size_t* width, graphics_size_t* height)
 {
     if(painter->font == NULL || s == NULL) return;
     if(width == NULL && height == NULL) return;
@@ -1437,7 +1440,7 @@ void painter_string_size(painter_t* painter, const char* s, graphics_size_t* wid
     if(height) *height = y;
 }
 
-size_t painter_draw_string_wrap(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s, graphics_size_t width)
+PAINTER_TIME_CRITICAL size_t painter_draw_string_wrap(painter_t* painter, graphics_pos_t x, graphics_pos_t y, const char* s, graphics_size_t width)
 {
     if(painter->font == NULL || s == NULL) return 0;
     

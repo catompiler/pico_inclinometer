@@ -1,4 +1,5 @@
 #include "imu.h"
+#include "port.h"
 #include <string.h>
 #include <math.h>
 
@@ -209,6 +210,7 @@ static err_t imu_fifo_read_raw(imu_t* imu)
 }
 
 
+RAM_FUNC
 static void imu_calc_scaled(imu_t* imu)
 {
     // Приведём к шкалам.
@@ -222,6 +224,7 @@ static void imu_calc_scaled(imu_t* imu)
     imu->scaled_data.gyro_z = (float)imu->raw_data.gyro_z * (1.0f / IMU_GYRO_1DPS);
 }
 
+RAM_FUNC
 static void imu_calc_apply_offsets_gains(imu_t* imu)
 {
     // Смещения.
@@ -235,14 +238,15 @@ static void imu_calc_apply_offsets_gains(imu_t* imu)
     imu->data.gyro_z = (imu->scaled_data.gyro_z - imu->offsets.gyro_z) * imu->gains.gyro_z;
 }
 
+RAM_FUNC
 static void imu_calc_angles(imu_t* imu)
 {
     float acc_x = imu->data.accel_x;
     float acc_y = imu->data.accel_y;
     float acc_z = imu->data.accel_z;
 
-    imu->accel_roll = atan2f(-acc_x, acc_y);
-    imu->accel_pitch = atan2f(-acc_x, -acc_z);
+    imu->accel_roll = atan2f(-acc_x, acc_y) - 0.5f*3.14159265359f;
+    imu->accel_pitch = atan2f(-acc_x, -acc_z) - 0.5f*3.14159265359f;
 
     float gyro_y = imu->data.gyro_y;
     float gyro_z = imu->data.gyro_z;

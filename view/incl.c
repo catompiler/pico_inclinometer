@@ -1,5 +1,6 @@
 #include "incl.h"
 #include <stddef.h>
+#include "imu_main.h"
 
 
 err_t view_incl_init(view_incl_t *view, view_incl_init_t* is)
@@ -28,5 +29,14 @@ err_t view_incl_init(view_incl_t *view, view_incl_init_t* is)
 void view_incl_paint(view_incl_t *view)
 {
     painter_fill(&view->painter);
+
+    size_t width = graphics_width(view->graphics);
+    size_t height = graphics_width(view->graphics);
+
+    const imu_process_state_t* imu_state = imu_process_get_state();
+
+    float roll  = imu_state->roll  / 3.14159265359f * 180.0f;
+    float pitch = imu_state->pitch / 3.14159265359f * 180.0f;
+
     painter_flush(&view->painter);
 }

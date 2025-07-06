@@ -74,7 +74,12 @@
         "i2c.h": "c",
         "stdio.h": "c",
         "spi.h": "c",
-        "stdlib.h": "c"
+        "stdlib.h": "c",
+        "imu_main.h": "c",
+        "stddef.h": "c",
+        "math.h": "c",
+        "port.h": "c",
+        "string.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }

@@ -149,7 +149,7 @@ void graphics_clear(graphics_t* graphics)
     }
 }
 
-void graphics_fill(graphics_t* graphics, graphics_color_t color)
+GRAPHICS_TIME_CRITICAL void graphics_fill(graphics_t* graphics, graphics_color_t color)
 {
 #ifdef USE_GRAPHICS_VIRTUAL_BUFFER
     if(graphics->type == GRAPHICS_TYPE_VIRTUAL){
@@ -169,7 +169,7 @@ void graphics_fill(graphics_t* graphics, graphics_color_t color)
     }
 }
 
-bool graphics_get_pixel_pos(const graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_size_t* byte, graphics_size_t* bit)
+GRAPHICS_TIME_CRITICAL bool graphics_get_pixel_pos(const graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_size_t* byte, graphics_size_t* bit)
 {
     if(x < 0 || y < 0) return false;
     if(x >= graphics->width || y >= graphics->height) return false;
@@ -229,7 +229,7 @@ bool graphics_get_pixel_pos(const graphics_t* graphics, graphics_pos_t x, graphi
     return true;
 }
 
-graphics_color_t graphics_get_pixel(const graphics_t* graphics, graphics_pos_t x, graphics_pos_t y)
+GRAPHICS_TIME_CRITICAL graphics_color_t graphics_get_pixel(const graphics_t* graphics, graphics_pos_t x, graphics_pos_t y)
 {
     if(x < 0 || y < 0) return 0;
     if(x >= graphics->width || y >= graphics->height) return 0;
@@ -298,7 +298,7 @@ graphics_color_t graphics_get_pixel(const graphics_t* graphics, graphics_pos_t x
     return 0;
 }
 
-bool graphics_set_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
+GRAPHICS_TIME_CRITICAL bool graphics_set_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
 {
     if(x < 0 || y < 0) return false;
     if(x >= graphics->width || y >= graphics->height) return false;
@@ -367,7 +367,7 @@ bool graphics_set_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y
     return true;
 }
 
-bool graphics_or_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
+GRAPHICS_TIME_CRITICAL bool graphics_or_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
 {
     if(x < 0 || y < 0) return false;
     if(x >= graphics->width || y >= graphics->height) return false;
@@ -436,7 +436,7 @@ bool graphics_or_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y,
     return true;
 }
 
-bool graphics_xor_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
+GRAPHICS_TIME_CRITICAL bool graphics_xor_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
 {
     if(x < 0 || y < 0) return false;
     if(x >= graphics->width || y >= graphics->height) return false;
@@ -505,7 +505,7 @@ bool graphics_xor_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y
     return true;
 }
 
-bool graphics_and_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
+GRAPHICS_TIME_CRITICAL bool graphics_and_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y, graphics_color_t color)
 {
     if(x < 0 || y < 0) return false;
     if(x >= graphics->width || y >= graphics->height) return false;
@@ -574,7 +574,7 @@ bool graphics_and_pixel(graphics_t* graphics, graphics_pos_t x, graphics_pos_t y
     return true;
 }
 
-graphics_color_t graphics_convert_color(graphics_format_t to_format, graphics_format_t from_format, graphics_color_t color)
+GRAPHICS_TIME_CRITICAL graphics_color_t graphics_convert_color(graphics_format_t to_format, graphics_format_t from_format, graphics_color_t color)
 {
     if(to_format == from_format) return color;
 
@@ -632,7 +632,7 @@ graphics_color_t graphics_convert_color(graphics_format_t to_format, graphics_fo
     return 0;
 }
 
-graphics_color_t graphics_apply_mask(graphics_format_t color_format, graphics_color_t color, graphics_format_t mask_format, graphics_color_t mask)
+GRAPHICS_TIME_CRITICAL graphics_color_t graphics_apply_mask(graphics_format_t color_format, graphics_color_t color, graphics_format_t mask_format, graphics_color_t mask)
 {
     if(color == 0 || mask == 0) return 0;
 

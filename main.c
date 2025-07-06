@@ -21,6 +21,7 @@
 #include "imu_main.h"
 #include "view/angles.h"
 #include "view/incl.h"
+#include "view/alt_ind.h"
 
 
 // // It's a Trap!
@@ -64,7 +65,7 @@ static gc9a01a_t tft;
 
     #define TFT_BUFFER_SIZE ((TFT_WIDTH)*(TFT_HEIGHT)*(TFT_PIXEL_SIZE))
 
-    uint8_t tft_buffer[TFT_BUFFER_SIZE];
+    ALIGNED4 uint8_t tft_buffer[TFT_BUFFER_SIZE];
 
     graphics_t graphics = make_graphics(tft_buffer, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
 
@@ -116,6 +117,9 @@ static view_angles_t view_angles;
 //! Отображение инклинометра.
 static view_incl_t view_incl;
 
+//! Отображение авиагоризонта.
+static view_alt_ind_t view_alt_ind;
+
 //! Тип функции отрисовки.
 typedef void (*view_paint_t)(void*);
 
@@ -160,7 +164,7 @@ static void init_spi(void)
 {
     spi_inst_t* spi = spi1;
 
-    spi_init(spi, 62500000);
+    spi_init(spi, 100*1000*1000);
     spi_set_format(spi, 8, SPI_CPOL_0, SPI_CPHA_0, SPI_MSB_FIRST);
     //hw_set_bits(&spi_get_hw(spi)->cr1, SPI_SSPCR1_LBM_BITS); // loopback.
 
@@ -273,6 +277,20 @@ static err_t init_view_incl(void)
     return E_NO_ERROR;
 }
 
+static err_t init_view_alt_ind(void)
+{
+    err_t err;
+
+    view_alt_ind_init_t is;
+    is.graphics = &graphics;
+    is.font_medium = &font_droid_sans_33x37;
+
+    err = view_alt_ind_init(&view_alt_ind, &is);
+    if(err != E_NO_ERROR) return err;
+
+    return E_NO_ERROR;
+}
+
 static err_t init_views(void)
 {
     err_t err;
@@ -286,6 +304,11 @@ static err_t init_views(void)
     if(err != E_NO_ERROR) return err;
     selected_view.view_ptr = (void*)&view_incl;
     selected_view.view_paint = (view_paint_t)view_incl_paint;
+
+    err = init_view_alt_ind();
+    if(err != E_NO_ERROR) return err;
+    selected_view.view_ptr = (void*)&view_alt_ind;
+    selected_view.view_paint = (view_paint_t)view_alt_ind_paint;
 
     return E_NO_ERROR;
 }
@@ -307,11 +330,25 @@ int main(void)
 
     err = init_views();
     if(err != E_NO_ERROR){
-        asm("bkpt #0");
+        //asm("bkpt #0");
+        for(;;){
+            painter_set_brush_color(&painter, 0);
+            painter_set_pen_color(&painter, MAKE_RGB(0xff, 0xff, 0xff));
+            painter_fill(&painter);
+            painter_set_font(&painter, &font_droid_sans_33x37);
+            painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
+            painter_draw_string(&painter, 50, 10, "views\ninit\nerror");
+            painter_flush(&painter);
+#if defined(DRAW_TO_FULL_BUFFER) && DRAW_TO_FULL_BUFFER == 1
+            gc9a01a_write_region(&tft, 0, 0, TFT_WIDTH-1, TFT_HEIGHT-1, tft_buffer, TFT_BUFFER_SIZE);
+            gc9a01a_wait(&tft);
+#endif
+            sleep_ms(100);
+        }
     }
 
-    selected_view.view_ptr = (void*)&view_angles;
-    selected_view.view_paint = (view_paint_t)view_angles_paint;
+    // selected_view.view_ptr = (void*)&view_angles;
+    // selected_view.view_paint = (view_paint_t)view_angles_paint;
 
     for(;;){
 

@@ -1,4 +1,5 @@
 #include "kfag.h"
+#include "port.h"
 #include <string.h>
 
 
@@ -12,6 +13,7 @@ err_t kfag_init(kfag_t *kf, float X0[2], float P0[4], float Q[4], float R)
     return E_NO_ERROR;
 }
 
+RAM_FUNC
 void kfag_predict(kfag_t* kf, float U, float dt)
 {
     float x0 = kf->X[0];
@@ -38,6 +40,7 @@ void kfag_predict(kfag_t* kf, float U, float dt)
     kf->P[3] = q3 + p3;
 }
 
+RAM_FUNC
 float kfag_update(kfag_t* kf, float Z)
 {
     float p0 = kf->P[0];

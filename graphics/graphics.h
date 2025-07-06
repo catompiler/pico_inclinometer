@@ -10,6 +10,13 @@
 #include <stddef.h>
 #include "errors/errors.h"
 #include "defs/defs.h"
+#include "port.h"
+
+
+//! Атрибуты для критичных по времени исполнения функций.
+#ifndef GRAPHICS_TIME_CRITICAL
+#define GRAPHICS_TIME_CRITICAL RAM_FUNC
+#endif
 
 
 
