@@ -72,6 +72,8 @@ add_executable(${PROJECT_NAME} main.c
                                imu/imu.c
                                kfag/kfag.c
                                imu_main.c
+                               view/angles.c
+                               view/incl.c
                                )
 
 # compiler flags
@@ -84,6 +86,7 @@ target_compile_options(${PROJECT_NAME} PRIVATE
 
 # defines
 target_compile_definitions(${PROJECT_NAME} PRIVATE
+                                           DRAW_TO_FULL_BUFFER=1
                                            USE_GRAPHICS_VIRTUAL_BUFFER
                                            USE_GRAPHICS_FORMAT_RGB_565
                                            USE_GRAPHICS_FORMAT_BW_1_V

@@ -19,6 +19,8 @@
 #include "pico/stdio.h"
 #include "errors/errors.h"
 #include "imu_main.h"
+#include "view/angles.h"
+#include "view/incl.h"
 
 
 // // It's a Trap!
@@ -41,67 +43,90 @@
 #define TFT_BL 25
 
 
-static spi_bus_t spi_tft;
 
 /*
  * Экран.
  */
+
+//! Шина экрана.
+static spi_bus_t spi_tft;
+
+// TFT.
+static gc9a01a_t tft;
+
 //! Размер пиксела - 2 байта (16 бит).
 #define TFT_PIXEL_SIZE 2
 //! Ширина экрана.
-#define TFT_WIDTH 320
+#define TFT_WIDTH 240
 #define TFT_HEIGHT 240
-//! Число буферов кэша TFT.
-#define TFT_CACHE_BUFS_COUNT 2
-//! Размер первого буфера.
-#define TFT_CACHE_BUF0_PIXELS 240
-#define TFT_CACHE_BUF0_SIZE (TFT_CACHE_BUF0_PIXELS * TFT_PIXEL_SIZE)
-//! Размер второго буфера.
-#define TFT_CACHE_BUF1_PIXELS 240
-#define TFT_CACHE_BUF1_SIZE (TFT_CACHE_BUF1_PIXELS * TFT_PIXEL_SIZE)
-// TFT.
-static gc9a01a_t tft;
-//! Первый буфер кэша TFT.
-static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
-//! Второй буфер кэша TFT.
-static uint8_t tft_cache_buf_data1[TFT_CACHE_BUF1_SIZE];
 
-//! Буферы кэша TFT.
-static gc9a01a_cache_buffer_t tft_cache_bufs[TFT_CACHE_BUFS_COUNT] = {
-    make_gc9a01a_cache_buffer(tft_cache_buf_data0, TFT_CACHE_BUF0_SIZE),
-    make_gc9a01a_cache_buffer(tft_cache_buf_data1, TFT_CACHE_BUF1_SIZE)
-};
-//! Кэш TFT.
-static gc9a01a_cache_t tft_cache = make_gc9a01a_cache(&tft, TFT_PIXEL_SIZE, tft_cache_bufs, TFT_CACHE_BUFS_COUNT, GC9A01A_ROW_COL_REVERSE_MODE);
-//! Виртуальный буфер изображения..
-static graphics_vbuf_t graph_vbuf = make_gc9a01a_cache_vbuf();
-//! Изображение на экране.
-static graphics_t graphics = make_gc9a01a_cache_graphics(&tft_cache, &graph_vbuf, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
+#if defined(DRAW_TO_FULL_BUFFER) && DRAW_TO_FULL_BUFFER == 1
+
+    #define TFT_BUFFER_SIZE ((TFT_WIDTH)*(TFT_HEIGHT)*(TFT_PIXEL_SIZE))
+
+    uint8_t tft_buffer[TFT_BUFFER_SIZE];
+
+    graphics_t graphics = make_graphics(tft_buffer, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
+
+#else // fallback - cache.
+
+    //! Число буферов кэша TFT.
+    #define TFT_CACHE_BUFS_COUNT 2
+    //! Размер первого буфера.
+    #define TFT_CACHE_BUF0_PIXELS 240
+    #define TFT_CACHE_BUF0_SIZE (TFT_CACHE_BUF0_PIXELS * TFT_PIXEL_SIZE)
+    //! Размер второго буфера.
+    #define TFT_CACHE_BUF1_PIXELS 240
+    #define TFT_CACHE_BUF1_SIZE (TFT_CACHE_BUF1_PIXELS * TFT_PIXEL_SIZE)
+    //! Первый буфер кэша TFT.
+    static uint8_t tft_cache_buf_data0[TFT_CACHE_BUF0_SIZE];
+    //! Второй буфер кэша TFT.
+    static uint8_t tft_cache_buf_data1[TFT_CACHE_BUF1_SIZE];
+
+    //! Буферы кэша TFT.
+    static gc9a01a_cache_buffer_t tft_cache_bufs[TFT_CACHE_BUFS_COUNT] = {
+        make_gc9a01a_cache_buffer(tft_cache_buf_data0, TFT_CACHE_BUF0_SIZE),
+        make_gc9a01a_cache_buffer(tft_cache_buf_data1, TFT_CACHE_BUF1_SIZE)
+    };
+    //! Кэш TFT.
+    static gc9a01a_cache_t tft_cache = make_gc9a01a_cache(&tft, TFT_PIXEL_SIZE, tft_cache_bufs, TFT_CACHE_BUFS_COUNT, GC9A01A_ROW_COL_REVERSE_MODE);
+    //! Виртуальный буфер изображения..
+    static graphics_vbuf_t graph_vbuf = make_gc9a01a_cache_vbuf();
+    //! Изображение на экране.
+    static graphics_t graphics = make_gc9a01a_cache_graphics(&tft_cache, &graph_vbuf, TFT_WIDTH, TFT_HEIGHT, GRAPHICS_FORMAT_RGB_565);
+
+#endif
+
 static painter_t painter = make_painter(&graphics);
 
 /*
-//! Битмапы шрифта 5x8.
-static const font_bitmap_t font_5x8_utf8_bitmaps[] = {
-    make_font_bitmap(32, 127, font_5x8_utf8_part0_data, FONT_5X8_UTF8_PART0_WIDTH, FONT_5X8_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0xb0, 0xb0, font_5x8_utf8_part1_data, FONT_5X8_UTF8_PART1_WIDTH, FONT_5X8_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0x400, 0x451, font_5x8_utf8_part2_data, FONT_5X8_UTF8_PART2_WIDTH, FONT_5X8_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
-};
-//! Шрифт 5x8.
-static font_t font5x8 = make_font_defchar(font_5x8_utf8_bitmaps, 3, 5, 8, 1, 1, 63);
+* Картинка для фона.
 */
-/*
-//! Битмапы шрифта 10x16.
-const font_bitmap_t font_10x16_utf8_bitmaps[] = {
-    make_font_bitmap(32, 127, font_10x16_utf8_part0_data, FONT_10X16_UTF8_PART0_WIDTH, FONT_10X16_UTF8_PART0_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0xb0, 0xb0, font_10x16_utf8_part1_data, FONT_10X16_UTF8_PART1_WIDTH, FONT_10X16_UTF8_PART1_HEIGHT, GRAPHICS_FORMAT_BW_1_V),
-    make_font_bitmap(0x400, 0x451, font_10x16_utf8_part2_data, FONT_10X16_UTF8_PART2_WIDTH, FONT_10X16_UTF8_PART2_HEIGHT, GRAPHICS_FORMAT_BW_1_V)
-};
-//! Шрифт 10x16.
-static font_t font10x16 = make_font_defchar(font_10x16_utf8_bitmaps, 3, 10, 16, 1, 0, 63);
-*/
-#define MAKE_RGB(r, g, b) GC9A01A_MAKE_RGB565(r, g, b)
-
 static graphics_t img_graphics = make_graphics(anime_image_240, ANIME_IMAGE_240_WIDTH, ANIME_IMAGE_240_HEIGHT, GRAPHICS_FORMAT_RGB_565);
+
+
+
+/*
+* Отображения.
+*/
+
+//! Отображение двух углов в виде текста.
+static view_angles_t view_angles;
+
+//! Отображение инклинометра.
+static view_incl_t view_incl;
+
+//! Тип функции отрисовки.
+typedef void (*view_paint_t)(void*);
+
+//! Структура выбранного отображения.
+typedef struct _View_Sel {
+    void* view_ptr; //!< Указатель на View.
+    view_paint_t view_paint; //!< Функция отрисовки.
+} view_sel_t;
+
+//! Текущее view.
+view_sel_t selected_view;
 
 
 static void spi_irq_handler(void)
@@ -212,19 +237,58 @@ static void setup_tft(void)
 
     gc9a01a_send_init(&tft);
 
-    // gc9a01a_cache_fill(&tft_cache, GC9A01A_MAKE_RGB565(0xff, 0, 0xff));
-    painter_set_brush(&painter, PAINTER_BRUSH_SOLID);
-    painter_set_pen(&painter, PAINTER_PEN_SOLID);
-    
-    painter_set_font(&painter, &font_droid_sans_33x37);
-    painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0, 0));
-    painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0x0, 0, 0x0));
-
-    painter_fill(&painter);
-    painter_flush(&painter);
+#if defined(DRAW_TO_FULL_BUFFER) && DRAW_TO_FULL_BUFFER == 1
+    memset(tft_buffer, 0x0, TFT_BUFFER_SIZE);
+#else
+    gc9a01a_cache_fill(&tft_cache, GC9A01A_MAKE_RGB565(0x0, 0, 0x0));
+    gc9a01a_cache_flush(&tft_cache);
+#endif
 }
 
-static uint16_t pixel = GC9A01A_MAKE_RGB565(0x00, 0xff, 0xff);
+static err_t init_view_angles(void)
+{
+    err_t err;
+
+    view_angles_init_t is;
+    is.graphics = &graphics;
+    is.font_medium = &font_droid_sans_33x37;
+
+    err = view_angles_init(&view_angles, &is);
+    if(err != E_NO_ERROR) return err;
+
+    return E_NO_ERROR;
+}
+
+static err_t init_view_incl(void)
+{
+    err_t err;
+
+    view_incl_init_t is;
+    is.graphics = &graphics;
+    is.font_medium = &font_droid_sans_33x37;
+
+    err = view_incl_init(&view_incl, &is);
+    if(err != E_NO_ERROR) return err;
+
+    return E_NO_ERROR;
+}
+
+static err_t init_views(void)
+{
+    err_t err;
+
+    err = init_view_angles();
+    if(err != E_NO_ERROR) return err;
+    selected_view.view_ptr = (void*)&view_angles;
+    selected_view.view_paint = (view_paint_t)view_angles_paint;
+
+    err = init_view_incl();
+    if(err != E_NO_ERROR) return err;
+    selected_view.view_ptr = (void*)&view_incl;
+    selected_view.view_paint = (view_paint_t)view_incl_paint;
+
+    return E_NO_ERROR;
+}
 
 int main(void)
 {
@@ -239,35 +303,33 @@ int main(void)
     init_tft();
     setup_tft();
 
-    const size_t str_buf_len = 128;
-    char str_buf[str_buf_len];
+    err_t err;
+
+    err = init_views();
+    if(err != E_NO_ERROR){
+        asm("bkpt #0");
+    }
+
+    selected_view.view_ptr = (void*)&view_angles;
+    selected_view.view_paint = (view_paint_t)view_angles_paint;
 
     for(;;){
-        painter_fill(&painter);
 
         const imu_process_state_t* imu_state = imu_process_get_state();
 
-        if(imu_state->status & IMU_PROCESS_STATUS_VALID){
-            memset(str_buf, 0x0, str_buf_len);
-            float roll  = imu_state->roll  / 3.14159265359f * 180.0f;
-            float pitch = imu_state->pitch / 3.14159265359f * 180.0f;
-            printf("roll: %.2f° pitch: %.2f°\n", roll, pitch);
-            int n = snprintf(str_buf, str_buf_len-1, "roll: %.2f°\npitch: %.2f°", roll, pitch);
-            if(n >= 0) str_buf[n] = '\0';
-            painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0xff, 0xff));
-            painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-            painter_draw_string(&painter, 10, 80, str_buf);
-        }else if(imu_state->status & (IMU_PROCESS_STATUS_IMU_ERROR|IMU_PROCESS_STATUS_INIT_IMU_ERROR|IMU_PROCESS_STATUS_INIT_SENSOR_ERROR)){
-            memset(str_buf, 0x0, str_buf_len);
-            int n = snprintf(str_buf, str_buf_len-1,
-                             "imu err: %d\ninit err: %d",
-                             (int)imu_state->imu_error,
-                             (int)imu_state->init_error);
-            if(n >= 0) str_buf[n] = '\0';
-            painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0xff, 0xff, 0));
-                painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-                painter_draw_string(&painter, 10, 80, str_buf);
+        float roll  = imu_state->roll  / 3.14159265359f * 180.0f;
+        float pitch = imu_state->pitch / 3.14159265359f * 180.0f;
+
+        printf("roll: %.2f° pitch: %.2f°\n", roll, pitch);
+
+        if(selected_view.view_paint && selected_view.view_ptr){
+            selected_view.view_paint(selected_view.view_ptr);
         }
+
+#if defined(DRAW_TO_FULL_BUFFER) && DRAW_TO_FULL_BUFFER == 1
+        gc9a01a_write_region(&tft, 0, 0, TFT_WIDTH-1, TFT_HEIGHT-1, tft_buffer, TFT_BUFFER_SIZE);
+        gc9a01a_wait(&tft);
+#endif
 
         /*painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0, 0, 0xff));
         painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0x0, 0xff, 0x0));
