@@ -1,6 +1,8 @@
 #include "alt_ind.h"
 #include <stddef.h>
 #include <math.h>
+#include "vec2.h"
+#include "mathutils.h"
 #include "imu_main.h"
 #include "port.h"
 

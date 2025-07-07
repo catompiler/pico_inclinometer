@@ -79,7 +79,9 @@
         "stddef.h": "c",
         "math.h": "c",
         "port.h": "c",
-        "string.h": "c"
+        "string.h": "c",
+        "mathutils.h": "c",
+        "vec2.h": "c"
     },
     "cortex-debug.variableUseNaturalFormat": true
 }
