@@ -241,6 +241,15 @@ static void setup_tft(void)
 
     gc9a01a_send_init(&tft);
 
+/*     gc9a01a_madctl_t mc;
+    mc.col_address_order = GC9A01A_COL_LEFT_TO_RIGHT;
+    mc.row_address_order = GC9A01A_ROW_TOP_TO_BOTTOM;
+    mc.color_order = GC9A01A_COLOR_ORDER_BGR;
+    mc.row_col_exchange = GC9A01A_ROW_COL_NORMAL_MODE;
+    mc.horizontal_refresh = GC9A01A_REFRESH_RIGHT_TO_LEFT;
+    mc.vertical_refresh = GC9A01A_REFRESH_TOP_TO_BOTTOM;
+    gc9a01a_set_madctl(&tft, &mc); */
+
 #if defined(DRAW_TO_FULL_BUFFER) && DRAW_TO_FULL_BUFFER == 1
     memset(tft_buffer, 0x0, TFT_BUFFER_SIZE);
 #else
@@ -368,14 +377,15 @@ int main(void)
         gc9a01a_wait(&tft);
 #endif
 
-        /*painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0, 0, 0xff));
+        /*
+        painter_set_font(&painter, &font_droid_sans_33x37);painter_set_pen_color(&painter, GC9A01A_MAKE_RGB565(0, 0, 0xff));
         painter_set_brush_color(&painter, GC9A01A_MAKE_RGB565(0x0, 0xff, 0x0));
         painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
         painter_draw_string(&painter, 100, 0, "Ня!");
         //gc9a01a_set_column_address(&tft, 0, 239);
         //gc9a01a_set_page_address(&tft, 0, 239);
         //gc9a01a_write(&tft, anime_image_240, ANIME_IMAGE_240_HEIGHT * ANIME_IMAGE_240_WIDTH * 2);
-        sleep_ms(1000);
+        //sleep_ms(1000);
         painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_NORMAL);
         painter_bitblt(&painter, 50, 50, &img_graphics, 50, 50, 150, 150);*/
     }

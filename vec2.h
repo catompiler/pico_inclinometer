@@ -21,7 +21,7 @@ typedef struct ALIGNED4 _Vec2 {
 
 // Минимальное отличное от нуля число.
 #ifndef VEC2_EPSYLON
-#define VEC2_EPSYLON 1e-6f
+#define VEC2_EPSYLON 1e-4f
 #endif
 
 
@@ -100,30 +100,10 @@ ALWAYS_INLINE static void vec2_perpendicular(vec2_t* v_res, const vec2_t* v)
 }
 
 /* Отражение вектора v относительно вектора r */
-ALWAYS_INLINE static void vec2_reflect(vec2_t* v_res, const vec2_t* v, const vec2_t* r)
-{
-    float rr = vec2_dot(r, r);
-
-    // Если вектор отражения нулевой, возвращаем исходный вектор
-    if (fabsf(rr) < VEC2_EPSYLON) {
-        *v_res = *v;
-        return;
-    }
-
-    // Формула отражения: v' = 2*(v·r)/(r·r)*r - v
-    float vr = vec2_dot(v, r);
-    vec2_t h;
-    vec2_mul(&h, r, vr / rr);
-
-    vec2_add(v_res, &h, &h);
-    vec2_sub(v_res, v_res, v);
-}
+EXTERN void vec2_reflect(vec2_t* v_res, const vec2_t* v, const vec2_t* r);
 
 /* Длина (модуль) вектора */
-ALWAYS_INLINE static float vec2_length(const vec2_t* v)
-{
-    return sqrtf(v->x * v->x + v->y * v->y);
-}
+EXTERN float vec2_length(const vec2_t* v);
 
 /* Квадрат длины вектора (избегаем вычисления квадратного корня) */
 ALWAYS_INLINE static float vec2_length_sq(const vec2_t* v)
@@ -132,18 +112,7 @@ ALWAYS_INLINE static float vec2_length_sq(const vec2_t* v)
 }
 
 /* Нормализация вектора (приведение к единичной длине) */
-ALWAYS_INLINE static bool vec2_normalize(vec2_t* v_res, const vec2_t* v)
-{
-    float len = vec2_length(v);
-
-    if(len < VEC2_EPSYLON){
-        return false;
-    }
-
-    vec2_div(v_res, v, len);
-
-    return true;
-}
+EXTERN bool vec2_normalize(vec2_t* v_res, const vec2_t* v);
 
 /* Проверка на точное равенство векторов */
 ALWAYS_INLINE static bool vec2_eq(const vec2_t* a, const vec2_t* b)
@@ -151,19 +120,7 @@ ALWAYS_INLINE static bool vec2_eq(const vec2_t* a, const vec2_t* b)
     return a->x == b->x && a->y == b->y;
 }
 
-
 /* Вращает вектор на заданный угол */
-ALWAYS_INLINE static void vec2_rotate(vec2_t* v_res, const vec2_t* v, float angle)
-{
-    float sin_val = sinf(angle);
-    float cos_val = cosf(angle);
-
-    float x = v->x;
-    float y = v->y;
-
-    v_res->x = x * cos_val - y * sin_val;
-    v_res->y = x * sin_val + y * cos_val;
-}
-
+EXTERN void vec2_rotate(vec2_t* v_res, const vec2_t* v, float angle);
 
 #endif //VEC2_H
