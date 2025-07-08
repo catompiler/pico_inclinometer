@@ -40,7 +40,7 @@ project(pico_inclinometer C CXX ASM)
 
 # Flags for each build type
 # Debug
-set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -O0 -ggdb")
+set(CMAKE_C_FLAGS_DEBUG_INIT "-Wall -Og -ggdb")
 # Release
 set(CMAKE_C_FLAGS_RELEASE_INIT "-Wall -O2")
 

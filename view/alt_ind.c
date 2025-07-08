@@ -59,25 +59,59 @@ static void draw_gnd(view_alt_ind_t* view, float roll, float pitch)
     graphics_size_t width = graphics_width(view->graphics);
     graphics_size_t height = graphics_height(view->graphics);
 
-    float x = 1.0f;
-    float y = 0.0f;
+    float widthf = (float)width;
+    float heightf = (float)height;
 
-    //iq15_t roll_iq = (iq15_t)((roll - (PI*0.5f)) * ((float)IQ15_PI_PU / PI));
-    //painter_rotate(&x_right, &y_right, roll_iq);
-    //painter_rotate(&x_left, &y_left, -roll_iq);
+    vec2_t v_zero = {0.0f, 0.0f};
+    vec2_t v_right_down = {widthf, -heightf};
+    vec2_t v_right_up = {widthf, heightf};
+    vec2_t v_left_up = {-widthf, heightf};
+
+    vec2_t v_right = {widthf, 0.0f};
+    vec2_t v_left;
+    vec2_rotate(&v_right, &v_right, roll);
+
+    vec2_t v_cross;
+    bool intersect_right = false;
+    bool intersect_up = false;
+
+    intersect_right = mathutils_lines_intersect(&v_cross,
+                                &v_zero, &v_right,
+                                &v_right_down, &v_right_up
+                            );
+    //
+    if(intersect_right){
+    }else{
+        intersect_up = mathutils_lines_intersect(&v_cross,
+                                        &v_zero, &v_right,
+                                        &v_left_up, &v_right_up
+                                    );
+        //
+    }
+
+    vec2_set(&v_right, &v_cross);
+    vec2_neg(&v_cross, &v_cross);
+    vec2_set(&v_left, &v_cross);
 
     float k = pitch * (1.0f/PI_HALF);
-    // graphics_pos_t pitch_offset = (graphics_pos_t)(k * (height));
 
-    graphics_pos_t x_left  = 0;
-    graphics_pos_t y_left  = (1.0 + k) * height/2;
-    graphics_pos_t x_right = width;
-    graphics_pos_t y_right = (1.0 + k) * height/2;
+    graphics_pos_t x_left  = v_left.x + width/2;
+    graphics_pos_t y_left  = v_left.y + (1.0 + k) * height/2;
+    graphics_pos_t x_right = v_right.x + width/2;
+    graphics_pos_t y_right = v_right.y + (1.0 + k) * height/2;
 
-    //painter_set_pen_color(&view->painter, ALT_IND_GND_COLOR);
-    //painter_draw_line(&view->painter, x_left, y_left, x_right, y_right);
-    painter_set_brush_color(&view->painter, ALT_IND_GND_COLOR);
-    painter_draw_fillrect(&view->painter, x_left, y_left, x_right, height);
+    painter_set_pen_color(&view->painter, ALT_IND_GND_COLOR);
+    painter_draw_line(&view->painter, x_left, y_left, x_right, y_right);
+
+    // float k = pitch * (1.0f/PI_HALF);
+
+    // graphics_pos_t x_left  = 0;
+    // graphics_pos_t y_left  = (1.0 + k) * height/2;
+    // graphics_pos_t x_right = width;
+    // graphics_pos_t y_right = (1.0 + k) * height/2;
+
+    // painter_set_brush_color(&view->painter, ALT_IND_GND_COLOR);
+    // painter_draw_fillrect(&view->painter, x_left, y_left, x_right, height);
 }
 
 void view_alt_ind_paint(view_alt_ind_t *view)

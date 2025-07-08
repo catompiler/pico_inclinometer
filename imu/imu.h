@@ -56,7 +56,7 @@
 #define IMU_KF_Q {0.001f, 0.0f,\
                   0.0f  , 0.01f}
 //! Значение дисперсии шума измерений.
-#define IMU_KF_R 0.01f
+#define IMU_KF_R 0.001f
 
 
 

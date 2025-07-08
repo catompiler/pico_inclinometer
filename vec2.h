@@ -152,4 +152,18 @@ ALWAYS_INLINE static bool vec2_eq(const vec2_t* a, const vec2_t* b)
 }
 
 
+/* Вращает вектор на заданный угол */
+ALWAYS_INLINE static void vec2_rotate(vec2_t* v_res, const vec2_t* v, float angle)
+{
+    float sin_val = sinf(angle);
+    float cos_val = cosf(angle);
+
+    float x = v->x;
+    float y = v->y;
+
+    v_res->x = x * cos_val - y * sin_val;
+    v_res->y = x * sin_val + y * cos_val;
+}
+
+
 #endif //VEC2_H
