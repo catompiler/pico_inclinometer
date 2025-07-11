@@ -36,6 +36,12 @@ typedef struct _Imu_Process_State {
 } imu_process_state_t;
 
 
+//! Инициализирует процесс IMU.
+EXTERN err_t imu_process_init(void);
+
+//! Итерация процесса IMU.
+EXTERN void imu_process_iter(void);
+
 //! Получает состояние процесса.
 const imu_process_state_t* imu_process_get_state(void);
 

@@ -24,6 +24,8 @@ set(PICO_BOARD pico)#waveshare_rp2040_lcd_1.28)
 endif()
 # pico compiler
 set(PICO_COMPILER pico_arm_cortex_m0plus_gcc)
+# export compile commands
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # fix for windows
 if((CMAKE_HOST_SYSTEM_NAME STREQUAL "Windows") OR (CMAKE_HOST_SYSTEM_NAME STREQUAL "CYGWIN"))
@@ -95,6 +97,7 @@ target_compile_definitions(${PROJECT_NAME} PRIVATE
                                            USE_GRAPHICS_FORMAT_RGB_565
                                            USE_GRAPHICS_FORMAT_BW_1_V
                                            USE_GRAPHICS_FORMAT_BW_1_H
+                                           IMU_ON_CORE=0
                                            )
 
 # linker flags

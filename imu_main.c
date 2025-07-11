@@ -132,8 +132,7 @@ static err_t init_imu_sensor(void)
 }
 
 
-
-void imu_main(void)
+err_t imu_process_init(void)
 {
     memset(&process_state, 0x0, sizeof(process_state));
 
@@ -145,19 +144,57 @@ void imu_main(void)
     process_state.init_error = err;
 
     if(err != E_NO_ERROR){
-        for(;;){
+        //for(;;){
             process_state.status = IMU_PROCESS_STATUS_INIT_SENSOR_ERROR;
             //asm("bkpt #0");
-            sleep_ms(100);
-        }
+            //sleep_ms(100);
+        //}
+        return err;
     }
 
     err = imu_init(&imu, &imu_sensor, IMU_INT1, IMU_INT2);
     process_state.init_error = err;
 
     if(err != E_NO_ERROR){
-        for(;;){
+        //for(;;){
             process_state.status = IMU_PROCESS_STATUS_INIT_IMU_ERROR;
+            //asm("bkpt #0");
+            //sleep_ms(100);
+        //}
+        return err;
+    }
+
+    return E_NO_ERROR;
+}
+
+void imu_process_iter(void)
+{
+    err_t err;
+
+    err = imu_process(&imu);
+    process_state.imu_error = err;
+
+    if(err == E_NO_ERROR){
+        process_state.roll = imu.roll;
+        process_state.pitch = imu.pitch;
+
+        process_state.status |= IMU_PROCESS_STATUS_VALID;
+        process_state.status &= ~IMU_PROCESS_STATUS_IMU_ERROR;
+    }else if(err != E_AGAIN){
+        process_state.status &= ~IMU_PROCESS_STATUS_VALID;
+        process_state.status |= IMU_PROCESS_STATUS_IMU_ERROR;
+        //asm("bkpt #0");
+        sleep_ms(1);
+    }
+}
+
+void imu_main(void)
+{
+    err_t err;
+
+    err = imu_process_init();
+    if(err != E_NO_ERROR){
+        for(;;){
             //asm("bkpt #0");
             sleep_ms(100);
         }
@@ -166,24 +203,9 @@ void imu_main(void)
     process_state.status = IMU_PROCESS_STATUS_RUN;
 
     for(;;){
-        err = imu_process(&imu);
-        process_state.imu_error = err;
-
-        if(err == E_NO_ERROR){
-            process_state.roll = imu.roll;
-            process_state.pitch = imu.pitch;
-
-            process_state.status |= IMU_PROCESS_STATUS_VALID;
-            process_state.status &= ~IMU_PROCESS_STATUS_IMU_ERROR;
-        }else if(err != E_AGAIN){
-            process_state.status &= ~IMU_PROCESS_STATUS_VALID;
-            process_state.status |= IMU_PROCESS_STATUS_IMU_ERROR;
-            //asm("bkpt #0");
-            sleep_ms(1);
-        }
+        imu_process_iter();
     }
 }
-
 
 const imu_process_state_t *imu_process_get_state(void)
 {

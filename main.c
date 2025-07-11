@@ -328,30 +328,31 @@ int main(void)
 
     init_dma_irq_mux();
 
+    err_t err;
+
+#if defined(IMU_ON_CORE) && IMU_ON_CORE == 1
     multicore_reset_core1();
     multicore_launch_core1(imu_main);
+#else
+    err = imu_process_init();
+    if(err != E_NO_ERROR){
+        //asm("bkpt #0");
+        for(;;){
+            printf("imu process init error!\n");
+            sleep_ms(100);
+        }
+    }
+#endif
 
     init_spi();
     init_tft();
     setup_tft();
 
-    err_t err;
-
     err = init_views();
     if(err != E_NO_ERROR){
         //asm("bkpt #0");
         for(;;){
-            painter_set_brush_color(&painter, 0);
-            painter_set_pen_color(&painter, MAKE_RGB(0xff, 0xff, 0xff));
-            painter_fill(&painter);
-            painter_set_font(&painter, &font_droid_sans_33x37);
-            painter_set_source_image_mode(&painter, PAINTER_SOURCE_IMAGE_MODE_BITMAP);
-            painter_draw_string(&painter, 50, 10, "views\ninit\nerror");
-            painter_flush(&painter);
-#if defined(DRAW_TO_FULL_BUFFER) && DRAW_TO_FULL_BUFFER == 1
-            gc9a01a_write_region(&tft, 0, 0, TFT_WIDTH-1, TFT_HEIGHT-1, tft_buffer, TFT_BUFFER_SIZE);
-            gc9a01a_wait(&tft);
-#endif
+            printf("views init error!\n");
             sleep_ms(100);
         }
     }
@@ -360,13 +361,16 @@ int main(void)
     // selected_view.view_paint = (view_paint_t)view_angles_paint;
 
     for(;;){
+#if !defined(IMU_ON_CORE) || IMU_ON_CORE == 0
+        imu_process_iter();
+#endif
 
-        const imu_process_state_t* imu_state = imu_process_get_state();
+        // const imu_process_state_t* imu_state = imu_process_get_state();
 
-        float roll  = imu_state->roll  / 3.14159265359f * 180.0f;
-        float pitch = imu_state->pitch / 3.14159265359f * 180.0f;
+        // float roll  = imu_state->roll  / 3.14159265359f * 180.0f;
+        // float pitch = imu_state->pitch / 3.14159265359f * 180.0f;
 
-        printf("roll: %.2f° pitch: %.2f°\n", roll, pitch);
+        // printf("roll: %.2f° pitch: %.2f°\n", roll, pitch);
 
         if(selected_view.view_paint && selected_view.view_ptr){
             selected_view.view_paint(selected_view.view_ptr);

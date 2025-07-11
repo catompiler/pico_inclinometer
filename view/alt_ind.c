@@ -101,6 +101,9 @@ static void draw_gnd(view_alt_ind_t* view, float roll, float pitch)
         //
     }
 
+    printf("r %u u %u\n", (unsigned)intersect_right, (unsigned)intersect_up);
+    //printf("(%.4f, %.4f)\n", v_cross.x, v_cross.y);
+
     if(!isnormal(v_cross.x) || !isnormal(v_cross.y)){
         if(intersect_right){
             painter_set_brush_color(&view->painter, MAKE_RGB(255, 0, 0));
