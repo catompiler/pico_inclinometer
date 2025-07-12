@@ -683,7 +683,7 @@ PAINTER_TIME_CRITICAL void painter_draw_triangle(painter_t* painter, graphics_po
         }
     }
     
-    if(x0 >= graphics_width(painter_graphics(painter)) || x2 < 0) return;
+    //if(x0 >= graphics_width(painter_graphics(painter)) || x2 < 0) return;
     if(y0 >= graphics_height(painter_graphics(painter)) || y2 < 0) return;
     
     //printf("%d %d %d\n", y0, y1, y2);
