@@ -57,29 +57,34 @@ static void fill_sky(view_alt_ind_t* view)
 RAM_FUNC
 static void draw_gnd(view_alt_ind_t* view, float roll, float pitch)
 {
-    graphics_size_t width = graphics_width(view->graphics);
-    graphics_size_t height = graphics_height(view->graphics);
+    graphics_pos_t width = (graphics_pos_t)graphics_width(view->graphics);
+    graphics_pos_t height = (graphics_pos_t)graphics_height(view->graphics);
+
+    graphics_pos_t width2 = width/2;
+    graphics_pos_t height2 = height/2;
 
     float widthf = (float)width;
     float heightf = (float)height;
 
-    float widthf2 = (float)(width/2);
-    float heightf2 = (float)(height/2);
+    float widthf2 = (float)(width2);
+    float heightf2 = (float)(height2);
 
-    vec2_t v_zero = {0.0f, 0.0f};
     vec2_t v_right_down = {widthf2, -heightf2};
     vec2_t v_right_up = {widthf2, heightf2};
     vec2_t v_left_up = {-widthf2, heightf2};
+
+    // float k = pitch * (1.0f/PI_HALF);
+    // float pitch_dhf = k * heightf2;
+    // vec2_t v_zero = {0.0f, pitch_dhf};
+    vec2_t v_zero = {0.0f, 0.0f};
 
     vec2_t v_left = {0.0f, 0.0f};
     vec2_t v_right = {widthf, 0.0f};
     vec2_rotate(&v_right, &v_right, -roll);
 
-    if(!isnormal(v_right.x) || !isnormal(v_right.y)){
-        painter_set_brush_color(&view->painter, MAKE_RGB(255, 0, 0));
-        painter_draw_fillrect(&view->painter, 0, 0, 120, 120);
-        return;
-    }
+    v_left.x = -v_right.x;
+    v_left.y = -v_right.y;
+    //vec2_reflect(&v_left, &v_right, &v_zero);
 
     //printf("(%.4f, %.4f)\n", v_right.x, v_right.y);
 
@@ -89,30 +94,31 @@ static void draw_gnd(view_alt_ind_t* view, float roll, float pitch)
     bool intersect_up = false;
 
     intersect_right = mathutils_segments_intersect(&v_cross,
-                                &v_zero, &v_right,
+                                &v_left, &v_right,
                                 &v_right_down, &v_right_up
                             );
     //
     if(!intersect_right){
         intersect_up = mathutils_segments_intersect(&v_cross,
-                                        &v_zero, &v_right,
+                                        &v_left, &v_right,
                                         &v_left_up, &v_right_up
                                     );
         //
     }
 
-    printf("r %u u %u\n", (unsigned)intersect_right, (unsigned)intersect_up);
-    //printf("(%.4f, %.4f)\n", v_cross.x, v_cross.y);
+    //printf("r %u u %u\n", (unsigned)intersect_right, (unsigned)intersect_up);
+    //printf("x(%.4f, %.4f)\n", v_cross.x, v_cross.y);
 
     if(!isnormal(v_cross.x) || !isnormal(v_cross.y)){
-        if(intersect_right){
-            painter_set_brush_color(&view->painter, MAKE_RGB(255, 0, 0));
-        }else if(intersect_up){
-            painter_set_brush_color(&view->painter, MAKE_RGB(0, 255, 0));
-        }else{
-            painter_set_brush_color(&view->painter, MAKE_RGB(0, 0, 255));
-        }
-        painter_draw_fillrect(&view->painter, 120, 120, 240, 240);
+        // if(intersect_right){
+        //     painter_set_brush_color(&view->painter, MAKE_RGB(255, 0, 0));
+        // }else if(intersect_up){
+        //     painter_set_brush_color(&view->painter, MAKE_RGB(0, 255, 0));
+        // }else{
+        //     painter_set_brush_color(&view->painter, MAKE_RGB(0, 0, 255));
+        // }
+        // painter_draw_fillrect(&view->painter, 120, 120, 240, 240);
+        //printf("vcross isnormal fail!\n");
         return;
     }
 
@@ -120,20 +126,66 @@ static void draw_gnd(view_alt_ind_t* view, float roll, float pitch)
     vec2_neg(&v_cross, &v_cross);
     vec2_set(&v_left, &v_cross);
 
-    graphics_pos_t x_left  = v_left.x + width/2;
-    graphics_pos_t y_left  = height/2 - v_left.y;
-    graphics_pos_t x_right = v_right.x + width/2;
-    graphics_pos_t y_right = height/2 - v_right.y;
+    if(v_right.x < v_left.x){
+        vec2_set(&v_cross, &v_left);
+        vec2_set(&v_left, &v_right);
+        vec2_set(&v_right, &v_cross);
+    }
 
-    painter_set_pen_color(&view->painter, ALT_IND_GND_COLOR);
-    painter_draw_line(&view->painter, x_left, y_left, x_right, y_right);
-    painter_draw_circle(&view->painter, x_left, y_left, 50);
+    // float k = pitch * (1.0f/PI_HALF);
+    // graphics_pos_t pitch_height2 = (1.0 + k) * height2;
+
+    graphics_pos_t x_left  = v_left.x + width2;
+    graphics_pos_t y_left  = height2 - v_left.y;
+    graphics_pos_t x_right = v_right.x + width2;
+    graphics_pos_t y_right = height2 - v_right.y;
+    graphics_pos_t x_mid;
+    graphics_pos_t y_mid;
+
+    if(x_left  <  0)      x_left  = 0;
+    if(x_right >= width)  x_right = width - 1;
+
+    if(y_left  <  0)          y_left  = 0;
+    else if(y_left >= height) y_left = height - 1;
+
+    if(y_right  <  0)          y_right  = 0;
+    else if(y_right >= height) y_right = height - 1;
+
+    if(y_right >= y_left){
+        x_mid = x_left;
+        y_mid = y_right;
+        //printf("m1(%d, %d)\n", x_mid, y_mid);
+    }else{
+        x_mid = x_right;
+        y_mid = y_left;
+        //printf("m2(%d, %d)\n", x_mid, y_mid);
+    }
+
+    //printf("m(%d, %d)\n", x_mid, y_mid);
+    printf("ph2(%d) ", (int)heightf2);
+    printf("l(%d, %d) ", x_left, y_left);
+    printf("m(%d, %d) ", x_mid, y_mid);
+    printf("r(%d, %d)\n", x_right, y_right);
+
+    // painter_set_pen_color(&view->painter, ALT_IND_GND_COLOR);
+    // painter_draw_line(&view->painter, x_left, y_left, x_right, y_right);
+    //painter_set_brush_color(&view->painter, ALT_IND_GND_COLOR);
+    //painter_draw_circle(&view->painter, x_left, y_left, 50);
 
     painter_set_brush_color(&view->painter, ALT_IND_GND_COLOR);
+    painter_draw_triangle(&view->painter, x_left, y_left, x_mid, y_mid, x_right, y_right);
     if(intersect_right){
-        painter_draw_triangle(&view->painter, x_left, y_left, x_right, y_left, x_right, y_right);
+        if(y_mid < height2){
+            painter_draw_fillrect(&view->painter, 0, 0, width - 1, y_mid);
+        }else if(y_mid >= height2){
+            painter_draw_fillrect(&view->painter, 0, y_mid, width - 1, height - 1);
+        }
     }else if(intersect_up){
-        //painter_draw_triangle(&view->painter, x_left, y_left, x_right, y_left, x_right, y_right);
+        if(x_mid < width2){
+            painter_draw_fillrect(&view->painter, 0, 0, x_mid, height - 1);
+        }else if(x_mid >= width2){
+            painter_draw_fillrect(&view->painter, x_mid, 0, width - 1, height - 1);
+        }
     }
 
     // float k = pitch * (1.0f/PI_HALF);
